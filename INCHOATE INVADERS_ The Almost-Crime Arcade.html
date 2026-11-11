@@ -1,0 +1,1263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>INCHOATE INVADERS: The Almost-Crime Arcade</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+  :root{
+    --bg:#07060e; --panel:#15102a; --green:#39ff88; --cyan:#4bf3ff; --magenta:#ff3ec8;
+    --yellow:#ffe14b; --red:#ff5a5a; --orange:#ff9a3c; --text:#ecebff; --soft:#d8d3ff;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0; padding:0; background:radial-gradient(ellipse at 50% -10%, #261b42 0%, #07060e 60%); color:var(--text); font-family:'Press Start 2P', monospace; min-height:100%;}
+  #crt{pointer-events:none; position:fixed; inset:0; z-index:50; background:repeating-linear-gradient(rgba(0,0,0,0) 0px, rgba(0,0,0,0) 2px, rgba(0,0,0,0.16) 3px, rgba(0,0,0,0) 4px); mix-blend-mode:overlay;}
+  #cabinet{max-width:920px; margin:14px auto; padding:14px; border:4px solid #3a3357; border-radius:18px; background:linear-gradient(180deg,#1c1730,#0d0a18); box-shadow:0 0 40px rgba(75,243,255,0.15), inset 0 0 30px rgba(0,0,0,0.6);}
+  #screenwrap{background:#000; border-radius:10px; border:3px solid #2b2447; padding:16px 18px 22px; min-height:560px; position:relative;}
+  #hud{display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px 12px; font-size:11px; padding:4px 2px 14px; border-bottom:2px dashed #3a3357; margin-bottom:14px;}
+  #hud .v{color:var(--cyan);} #hud .lives{color:var(--magenta); letter-spacing:2px;}
+  .hud-btn{font-family:'Press Start 2P',monospace; font-size:10px; background:#1a1530; color:var(--yellow); border:2px solid var(--yellow); border-radius:6px; padding:6px 8px; cursor:pointer;}
+  .hud-btn:hover{filter:brightness(1.25);}
+  .hud-btn.teach{color:var(--orange); border-color:var(--orange);}
+  .hud-btn.teach.on{background:var(--orange); color:#1a0b00;}
+  .screen{display:none; animation:fadein .25s ease;}
+  .screen.active{display:block;}
+  @keyframes fadein{from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:none;}}
+  h1{font-size:24px; text-align:center; color:var(--green); text-shadow:0 0 8px var(--green), 0 0 18px rgba(57,255,136,.6); margin:12px 0 6px; line-height:1.5;}
+  h2{font-size:15px; color:var(--cyan); text-shadow:0 0 6px var(--cyan); margin:0 0 12px; text-align:center; line-height:1.5;}
+  h3{font-size:12px; color:var(--yellow); margin:4px 0 10px; line-height:1.5;}
+  h4{font-size:11px; margin:0 0 6px; line-height:1.5;}
+  p, li, .body{font-family:'Courier New', monospace; font-size:16px; line-height:1.6; color:var(--text);}
+  .center{text-align:center;} .blink{animation:blink 1s steps(2) infinite;} @keyframes blink{50%{opacity:0;}}
+  .arcade-btn{font-family:'Press Start 2P',monospace; background:linear-gradient(180deg,#2c2450,#1a1530); color:var(--yellow); border:2px solid var(--yellow); padding:12px 18px; font-size:11px; cursor:pointer; border-radius:6px; box-shadow:0 4px 0 #6b5a1a, 0 0 12px rgba(255,225,75,0.25); margin:6px; line-height:1.6;}
+  .arcade-btn:hover{filter:brightness(1.2);} .arcade-btn:active{transform:translateY(3px); box-shadow:0 1px 0 #6b5a1a;}
+  .arcade-btn.green{color:var(--green); border-color:var(--green); box-shadow:0 4px 0 #1a6b3f, 0 0 12px rgba(57,255,136,.25);}
+  .arcade-btn.cyan{color:var(--cyan); border-color:var(--cyan); box-shadow:0 4px 0 #1a5f6b, 0 0 12px rgba(75,243,255,.25);}
+  .arcade-btn.magenta{color:var(--magenta); border-color:var(--magenta); box-shadow:0 4px 0 #6b1a52, 0 0 12px rgba(255,62,200,.25);}
+  .arcade-btn.orange{color:var(--orange); border-color:var(--orange); box-shadow:0 4px 0 #6b3a10, 0 0 12px rgba(255,154,60,.25);}
+  .arcade-btn.big{font-size:14px; padding:16px 24px;}
+  .panel{background:var(--panel); border:2px solid #3a3357; border-radius:10px; padding:16px 18px; margin:12px 0;}
+  .term-box{border-left:5px solid var(--cyan); padding:10px 14px; margin:10px 0; background:rgba(75,243,255,0.06);}
+  .term-box h4{color:var(--cyan);}
+  .term-box.m{border-color:var(--magenta); background:rgba(255,62,200,0.06);} .term-box.m h4{color:var(--magenta);}
+  .term-box.y{border-color:var(--yellow); background:rgba(255,225,75,0.06);} .term-box.y h4{color:var(--yellow);}
+  .term-box.g{border-color:var(--green); background:rgba(57,255,136,0.06);} .term-box.g h4{color:var(--green);}
+  .term-box p{margin:4px 0; font-size:15px;}
+  .chip{display:inline-block; font-family:'Courier New',monospace; font-size:15px; background:#1a1530; border:2px solid #4a4270; color:var(--text); padding:9px 14px; margin:5px; border-radius:20px; cursor:pointer; user-select:none;}
+  .chip:hover{border-color:var(--cyan);}
+  .chip.active{background:var(--magenta); color:#1a0010; border-color:var(--magenta); font-weight:bold;}
+  .qcard{max-width:660px; margin:0 auto 10px; background:var(--panel); border:2px solid var(--cyan); border-radius:10px; padding:14px 18px; font-family:'Courier New',monospace; font-size:17px; line-height:1.55; box-shadow:0 0 20px rgba(75,243,255,0.15);}
+  .qcard .qmeta{font-family:'Press Start 2P'; font-size:10px; color:var(--magenta); margin-bottom:8px;}
+  .topbar{max-width:660px; margin:0 auto 6px; display:flex; justify-content:space-between; font-size:10px; color:var(--cyan);}
+  .timerbar-outer{max-width:660px; margin:0 auto 8px; height:14px; background:#1a1530; border:2px solid #4a4270; border-radius:8px; overflow:hidden;}
+  .timerbar-inner{height:100%; width:100%; background:var(--cyan);}
+  canvas#game{display:block; width:100%; max-width:660px; margin:0 auto; background:#050308; border:3px solid #3a3357; border-radius:8px; cursor:pointer; touch-action:manipulation;}
+  .controls-hint{max-width:660px; margin:8px auto 0; text-align:center; font-family:'Courier New',monospace; font-size:14px; color:var(--soft);}
+  .optlist{max-width:660px; margin:10px auto 0; padding:0; list-style:none;}
+  .optlist li{font-size:15px; padding:6px 10px; margin:4px 0; border:1px solid #2f2950; border-radius:6px; background:rgba(255,255,255,0.03);}
+  .optlist li b{color:var(--yellow); font-family:'Press Start 2P'; font-size:11px; margin-right:6px;}
+  .optlist li.correct{border-color:var(--green); color:var(--green);}
+  .optlist li.wrong{border-color:var(--red); color:var(--red);}
+  .feedback{max-width:660px; margin:12px auto 0; display:none;}
+  .feedback .verdict{font-size:13px; margin-bottom:8px;}
+  .feedback .verdict.ok{color:var(--green);} .feedback .verdict.bad{color:var(--red);} .feedback .verdict.skip{color:var(--orange);}
+  .feedback p{margin:6px 0;}
+  .skipbtn{display:none;}
+  .teacher-on .skipbtn{display:inline-block;}
+  .rank-row{display:flex; justify-content:space-between; gap:12px; max-width:620px; margin:6px auto; padding:8px 12px; border-radius:6px; background:rgba(255,255,255,0.03); font-family:'Courier New'; font-size:15px;}
+  .rank-row .rn{font-weight:bold; color:var(--cyan); min-width:210px;}
+  .rank-row.achieved{background:rgba(57,255,136,0.14); border:1px solid var(--green);}
+  .rank-row.achieved .rn{color:var(--green);}
+  .stat-line{font-family:'Courier New'; font-size:16px; text-align:center; margin:4px 0;}
+  .badge{font-size:14px; color:var(--yellow); text-shadow:0 0 10px var(--yellow); text-align:center; margin:14px 0; line-height:1.6;}
+  .report-row{display:flex; flex-wrap:wrap; align-items:center; justify-content:center; gap:8px;}
+  .report-row label{font-family:'Courier New'; font-size:16px;}
+  .report-row input{font-family:'Courier New'; font-size:16px; padding:8px 10px; border-radius:6px; border:2px solid var(--cyan); background:#0b0918; color:var(--text); min-width:240px;}
+  .status-line{font-family:'Courier New'; font-size:14px; color:var(--yellow); text-align:center; min-height:22px; margin-top:6px;}
+  #flash{position:absolute; top:40%; left:50%; transform:translate(-50%,-50%); font-size:22px; pointer-events:none; opacity:0; z-index:10; text-shadow:0 0 14px currentColor; white-space:nowrap;}
+  #flash.show{animation:pop .9s ease forwards;}
+  @keyframes pop{0%{opacity:0; transform:translate(-50%,-40%) scale(.6);} 20%{opacity:1; transform:translate(-50%,-50%) scale(1.1);} 70%{opacity:1;} 100%{opacity:0; transform:translate(-50%,-60%);}}
+  .overlay{display:none; position:fixed; inset:0; z-index:60; background:rgba(4,3,10,0.9); align-items:center; justify-content:center; padding:20px;}
+  .overlay.show{display:flex;}
+  .overlay-inner{background:var(--panel); border:2px solid var(--cyan); border-radius:12px; padding:20px; max-width:600px; width:100%; max-height:90vh; overflow-y:auto; box-shadow:0 0 30px rgba(75,243,255,0.25);}
+  .dlg-title{font-family:'Press Start 2P'; font-size:13px; color:var(--yellow); margin:0 0 12px;}
+  .overlay input[type=password]{font-family:'Courier New'; font-size:16px; padding:8px 10px; border-radius:6px; border:2px solid var(--orange); background:#0b0918; color:var(--text);}
+  .err{color:var(--red); font-family:'Courier New'; font-size:15px; min-height:20px;}
+  .lvl-grid{display:grid; grid-template-columns:1fr 1fr; gap:6px;}
+  @media (max-width:640px){ .lvl-grid{grid-template-columns:1fr;} .rank-row{flex-direction:column;} }
+  .footer-note{font-family:'Courier New'; font-size:13px; color:#b4add9; text-align:center; margin-top:16px;}
+  .recap{max-height:360px; overflow-y:auto;}
+</style>
+</head>
+<body>
+<div id="crt"></div>
+<div id="cabinet">
+  <div id="screenwrap">
+    <div id="hud">
+      <span>SCORE <span class="v" id="hud-score">0</span></span>
+      <span>LEVEL <span class="v" id="hud-level">-</span>/6</span>
+      <span>STREAK <span class="v" id="hud-streak">0</span></span>
+      <span class="lives" aria-label="Lives"><span id="hud-lives">♥♥♥</span></span>
+      <button class="hud-btn" id="hud-pace" type="button" aria-label="Change reading speed">⏱ <span id="hud-pace-label">STANDARD</span></button>
+      <button class="hud-btn teach" id="hud-teacher" type="button">🔑 TEACHER</button>
+    </div>
+    <div id="flash" aria-hidden="true"></div>
+
+    <!-- TITLE -->
+    <section class="screen active" id="screen-title">
+      <h1>INCHOATE INVADERS<br><span style="font-size:13px; color:var(--magenta);">THE ALMOST-CRIME ARCADE</span></h1>
+      <p class="center">Solicitation, conspiracy, attempt, and the merger rules that decide which of them survive. You get six levels and three lives, and good intentions earn nothing.</p>
+      <p class="center" style="font-size:14px; color:var(--soft);">Source: Themis Criminal Law outline, Section IV (Inchoate Crimes), pp. 38-44.</p>
+      <div class="center" style="margin-top:22px;">
+        <button class="arcade-btn green big" id="btn-start" type="button">▶ INSERT COIN</button>
+      </div>
+      <div class="center"><button class="arcade-btn orange" id="btn-teacher-title" type="button">🔑 TEACHER MODE</button></div>
+      <p class="center blink" style="font-family:'Press Start 2P'; font-size:10px; color:var(--yellow); margin-top:18px;">PRESS START</p>
+    </section>
+
+    <!-- BRIEFING -->
+    <section class="screen" id="screen-briefing">
+      <h2>MISSION BRIEFING</h2>
+      <div class="panel">
+        <h3>What you are hunting</h3>
+        <p>An inchoate offense is a crime that is "only partly in existence." All three are specific-intent crimes, and a defendant can be convicted of one even though the intended crime never happened (Outline p. 38, § IV).</p>
+        <div class="term-box">
+          <h4>LEVEL 1 · SOLICITATION</h4>
+          <p>Asking someone else to commit a crime, intending that they do it.</p>
+        </div>
+        <div class="term-box m">
+          <h4>LEVELS 2-3 · CONSPIRACY</h4>
+          <p>Agreeing with someone to commit a crime, and what liability follows.</p>
+        </div>
+        <div class="term-box y">
+          <h4>LEVELS 4-5 · ATTEMPT</h4>
+          <p>A substantial step toward a crime, with the specific intent to commit it.</p>
+        </div>
+        <div class="term-box g">
+          <h4>LEVEL 6 · MERGER (BOSS)</h4>
+          <p>Which of these charges survive when more than one applies.</p>
+        </div>
+      </div>
+      <div class="panel">
+        <h3>How you play</h3>
+        <div class="term-box">
+          <h4>THE CATCHER (LEVELS 1 AND 3)</h4>
+          <p>A case card falls toward three verdict bins. Steer the gavel with ← and →, then let the card land, or slam it down early with ↓ or SPACE for a bigger speed bonus. Clicking a bin moves the gavel there and slams.</p>
+          <p><b>The verdict bins.</b> GUILTY (or LIABLE) and NOT GUILTY (or NOT LIABLE) mean the outline gives one answer no matter which rule applies. SPLIT means the outline describes competing rules, e.g., common law versus the MPC, that reach different results on those facts.</p>
+        </div>
+        <div class="term-box m">
+          <h4>THE SHOOTER (LEVELS 2, 5, AND 6)</h4>
+          <p>Answer targets descend in a row. Move with ← and →, fire with SPACE. The first target you hit is your answer. Prefer not to aim? Press the target's letter key (A-D) or click it, and your ship lines up and fires for you.</p>
+        </div>
+        <div class="term-box y">
+          <h4>THE LADDER (LEVEL 4)</h4>
+          <p>Climb with ↑ and ↓ to the highest rung the facts reach, then lock in with SPACE or ENTER. Clicking a rung climbs there and locks in.</p>
+        </div>
+      </div>
+      <div class="panel">
+        <h3>Scoring and lives</h3>
+        <p>A correct answer earns 100 points plus a speed bonus of up to 50. Starting with your third correct answer in a row, each one adds 25 more. A wrong answer or a timeout costs a life. You start with 3 lives and can hold up to 6: a perfect level earns a life and 250 points, and 5 correct in a row within a level earns a life once per level. Lose them all and the game ends.</p>
+        <p>After every answer the explanation stays on screen until you press NEXT. Nothing you need to read is ever on a clock.</p>
+      </div>
+      <div class="panel">
+        <h3>Reading speed</h3>
+        <p>Every round starts only when you say so. Pick how fast the clocks run; you can change this anytime from the ⏱ button at the top, even in the middle of a question.</p>
+        <div class="center" id="pace-chips-brief"></div>
+      </div>
+      <div class="center"><button class="arcade-btn green big" id="btn-brief-go" type="button">▶ START LEVEL 1</button></div>
+    </section>
+
+    <!-- LEVEL (shared by all six levels) -->
+    <section class="screen" id="screen-level">
+      <h2 id="lvl-title">LEVEL</h2>
+      <div id="lvl-gate" class="panel">
+        <h3 id="lvl-gate-head">How this level works</h3>
+        <div id="lvl-intro"></div>
+        <div class="center"><button class="arcade-btn green" id="btn-begin" type="button">▶ I'VE READ THIS. BEGIN</button></div>
+      </div>
+      <div id="lvl-play" style="display:none;">
+        <div class="topbar"><span id="lvl-progress">CASE 1/1</span><span id="lvl-clock">-- SEC</span></div>
+        <div class="timerbar-outer"><div class="timerbar-inner" id="timerbar"></div></div>
+        <div class="qcard" id="qcard"><div class="qmeta" id="qmeta"></div><div id="qtext"></div></div>
+        <canvas id="game" width="660" height="420" aria-label="Game play area"></canvas>
+        <div class="controls-hint" id="controls-hint"></div>
+        <ol class="optlist" id="optlist"></ol>
+        <div class="center"><button class="arcade-btn orange skipbtn" id="btn-skip" type="button">⏭ SKIP: REVEAL ANSWER</button></div>
+        <div class="feedback panel" id="feedback" aria-live="polite">
+          <div class="verdict" id="fb-verdict"></div>
+          <div id="fb-body"></div>
+          <div class="center"><button class="arcade-btn cyan" id="btn-next" type="button">NEXT ▶</button></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- LEVEL COMPLETE -->
+    <section class="screen" id="screen-done">
+      <h2 id="done-title">LEVEL CLEAR</h2>
+      <div class="panel center">
+        <h3 class="center">Level report</h3>
+        <div id="done-stats"></div>
+        <div id="done-bonus" class="badge"></div>
+      </div>
+      <div class="center"><button class="arcade-btn green big" id="btn-done-next" type="button">NEXT LEVEL ▶</button></div>
+    </section>
+
+    <!-- END -->
+    <section class="screen" id="screen-end">
+      <h2 style="font-size:20px; color:var(--green); text-shadow:0 0 12px var(--green);">CASE CLOSED</h2>
+      <p class="stat-line">Your score: <b id="end-score">0</b> pts</p>
+      <p class="stat-line">Correct answers: <b id="end-correct">0/0</b> · Best streak: <b id="end-streak">0</b></p>
+      <div class="panel">
+        <h3>Rank table</h3>
+        <div id="end-ranks"></div>
+        <p style="font-size:14px; color:var(--soft);">The ranks borrow the outline's attempt vocabulary (§ IV.D), climbing from mere preparation, which is no attempt at all, past the MPC's substantial step and the common law's stricter dangerous-proximity test, up to a completed crime that absorbs the attempt through merger. That makes "Completed Offense" the only completed crime anyone will congratulate you for.</p>
+      </div>
+      <div class="panel">
+        <h3>What you covered</h3>
+        <div class="recap" id="end-recap"></div>
+      </div>
+      <div class="panel">
+        <h3>Download Your Completion Report</h3>
+        <div class="report-row">
+          <label for="end-name">Name:</label><input id="end-name" type="text" autocomplete="name">
+        </div>
+        <div class="center">
+          <button class="arcade-btn green" id="end-pdf" type="button">📄 SAVE AS PDF</button>
+          <button class="arcade-btn cyan" id="end-html" type="button">⬇ DOWNLOAD (HTML)</button>
+        </div>
+        <div class="status-line" id="end-status"></div>
+      </div>
+      <div class="center"><button class="arcade-btn magenta" id="end-again" type="button">↺ PLAY AGAIN</button></div>
+    </section>
+
+    <!-- GAME OVER -->
+    <section class="screen" id="screen-gameover">
+      <h2 style="font-size:22px; color:var(--red); text-shadow:0 0 14px var(--red);">GAME OVER</h2>
+      <p class="center">Out of lives during <b id="go-level">Level 1</b>. Your attempt failed, which in this game at least carries no conviction.</p>
+      <p class="stat-line">Your score: <b id="go-score">0</b> pts · Correct: <b id="go-correct">0/0</b></p>
+      <div class="center"><button class="arcade-btn magenta big" id="go-again" type="button">↺ PLAY AGAIN</button></div>
+      <div class="panel">
+        <h3>Download Your Completion Report</h3>
+        <div class="report-row">
+          <label for="go-name">Name:</label><input id="go-name" type="text" autocomplete="name">
+        </div>
+        <div class="center">
+          <button class="arcade-btn green" id="go-pdf" type="button">📄 SAVE AS PDF</button>
+          <button class="arcade-btn cyan" id="go-html" type="button">⬇ DOWNLOAD (HTML)</button>
+        </div>
+        <div class="status-line" id="go-status"></div>
+      </div>
+    </section>
+
+    <p class="footer-note">Built from the Themis Criminal Law outline, § IV (Inchoate Crimes). A study game, not legal advice.</p>
+  </div>
+</div>
+
+<!-- PACE DIALOG -->
+<div class="overlay" id="pace-overlay" role="dialog" aria-modal="true" aria-labelledby="pace-title">
+  <div class="overlay-inner">
+    <p class="dlg-title" id="pace-title">READING SPEED</p>
+    <p>Takes effect immediately, including on the question in front of you. The clock keeps the share of time you have already used and stretches or shrinks the rest.</p>
+    <div class="center" id="pace-chips-dlg"></div>
+    <div class="center"><button class="arcade-btn cyan" id="pace-done" type="button">▶ DONE</button></div>
+  </div>
+</div>
+
+<!-- TEACHER DIALOG -->
+<div class="overlay" id="teacher-overlay" role="dialog" aria-modal="true" aria-labelledby="teacher-title">
+  <div class="overlay-inner" style="border-color:var(--orange);">
+    <p class="dlg-title" id="teacher-title">TEACHER MODE</p>
+    <div id="teacher-locked">
+      <p>Teacher mode lets you jump to any level, skip any question to reveal its answer, and play without losing lives.</p>
+      <form id="teacher-form" class="report-row">
+        <label for="teacher-pw">Password:</label>
+        <input type="password" id="teacher-pw" autocomplete="off">
+        <button class="arcade-btn orange" type="submit">UNLOCK</button>
+      </form>
+      <p class="err" id="teacher-err" role="alert"></p>
+    </div>
+    <div id="teacher-unlocked" style="display:none;">
+      <p style="color:var(--orange);">Teacher mode is ON. Lives are frozen and every question has a SKIP button.</p>
+      <div class="lvl-grid" id="teacher-levels"></div>
+      <div class="center" style="margin-top:10px;"><button class="arcade-btn magenta" id="teacher-off" type="button">TURN TEACHER MODE OFF</button></div>
+    </div>
+    <div class="center"><button class="arcade-btn cyan" id="teacher-close" type="button">CLOSE</button></div>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  // Client-side check only: anyone who reads the page source can find it.
+  // It deters casual clicking, not a determined student. Change it here.
+  var TEACHER_PASSWORD = 'inchoate';
+
+  // =========================================================
+  // CONTENT. Every rule, example, and case below comes from the
+  // Themis Criminal Law outline (W24), Section IV, Inchoate Crimes,
+  // pp. 38-44. Hypotheticals apply the outline's rules; the outline's
+  // own examples are flagged as such in the explanations.
+  // =========================================================
+  var LEVELS = [
+    {
+      id:1, topic:'Solicitation', name:'THE ASK', mech:'catcher',
+      prompt:'Is the solicitor guilty of solicitation?',
+      bins:[{k:'g',label:'GUILTY',sub:'under any rule'},{k:'n',label:'NOT GUILTY',sub:'under any rule'},{k:'s',label:'SPLIT',sub:'common law vs. MPC'}],
+      intro:'<p>Solicitation is enticing, encouraging, requesting, or commanding another person to commit a crime, with the intent that the other person commit it (Outline p. 38, § IV.B). Each card describes someone doing some asking. Steer the gavel under the right verdict before the card lands.</p><p><strong>GUILTY</strong> and <strong>NOT GUILTY</strong> mean the answer is the same under the common law and the MPC. <strong>SPLIT</strong> means the outcome turns on which of the two the jurisdiction follows.</p>',
+      recap:'When solicitation is complete and which defenses work. The level covered the moment of completion (the ask itself), the irrelevance of the other person’s answer, factual impossibility, the statutory protected-class exception, and renunciation under the common law versus the MPC.',
+      terms:['Elements of solicitation','Completion upon encouragement','Renunciation (MPC § 5.02(3))','Factual impossibility','Protected-class exception'],
+      items:[
+        {tag:'BAR STOOL PITCH', ans:'g', fact:'In a bar, Ana asks Ben to kill her husband. Ben laughs and says no. Is Ana guilty of solicitation?',
+         why:'Solicitation is complete the moment Ana does the asking. The person solicited never has to agree, so Ben’s refusal changes nothing. This is the outline’s own bar example (p. 39, § IV.B.1 and the example in § IV.B.3).'},
+        {tag:'UNDERCOVER EAR', ans:'g', fact:'Carl offers a stranger $5,000 to torch a rival’s warehouse. The stranger is an undercover officer who never had any intention of helping. Is Carl guilty of solicitation?',
+         why:'The crime is completed upon the act of encouragement, and the other person need not agree (p. 39, § IV.B.1). Whether the listener is a cop or a houseplant, Carl finished the offense when he made the offer.'},
+        {tag:'EMPTY GARAGE', ans:'g', fact:'Dee urges Eli to steal the vintage car parked in her neighbor’s garage. Unknown to both of them, the neighbor sold the car last week. Is Dee guilty of solicitation?',
+         why:'Factual impossibility is not a defense to solicitation, because the solicitation is completed at the moment of enticement even if the crime could never be pulled off (p. 39, § IV.B.3.b).'},
+        {tag:'THE BOSS SAYS', ans:'g', fact:'Fran, a shift manager, orders her cashier to skim cash from the register and split it with her. The cashier refuses and quits that afternoon. Is Fran guilty of solicitation?',
+         why:'Encouragement can take the form of a command, not just a polite request (p. 39, § IV.B.1). The cashier’s refusal is irrelevant because agreement is not an element.'},
+        {tag:'UNANSWERED EMAIL', ans:'g', fact:'Gus emails his cousin, urging him to beat up Gus’s landlord and promising to pay his bail. The cousin reads the email and never replies. Is Gus guilty of solicitation?',
+         why:'Gus encouraged another person to commit a crime and intended that he do it. The crime was complete when Gus sent the encouragement; the cousin’s silence is no more a defense than a refusal would be (p. 39, § IV.B.1).'},
+        {tag:'SHE SAYS YES', ans:'g', fact:'Hal asks Ivy to help him rob a jewelry store, and Ivy agrees on the spot. Neither of them does anything else yet. Is Hal guilty of solicitation?',
+         why:'Hal completed the solicitation when he asked. Ivy’s yes creates a second problem for him rather than solving the first: when the other person agrees, the two may also become co-conspirators (p. 39, § IV.B.2).'},
+        {tag:'UNDERAGE ASK', ans:'n', fact:'Jo, a minor, asks an adult to have sex with her. The statutory rape law exists to protect people in Jo’s position. Is Jo guilty of solicitation of statutory rape?',
+         why:'A solicitor who belongs to a group that the statute exempts from culpability cannot be guilty of soliciting that statutory crime. The outline uses this exact example: a minor soliciting sex cannot be guilty of solicitation of statutory rape (p. 39, § IV.B.3.b).'},
+        {tag:'BAKERY RIVAL', ans:'n', fact:'Kim urges her friend to quit his job and open a competing bakery directly across the street from his old boss. Is Kim guilty of solicitation?',
+         why:'The second element requires encouragement to commit a crime (p. 38, § IV.B). Opening a rival bakery is rude, perhaps, but it is not a crime, so there is nothing to solicit.'},
+        {tag:'MOVIE NIGHT', ans:'n', fact:'Watching a heist movie, Leo tells his roommate, "Someone should rob that bank on Main Street." He has no wish for anyone to actually do it. Is Leo guilty of solicitation?',
+         why:'Solicitation requires the intent that the other person commit the crime (p. 38, § IV.B), and inchoate offenses are specific-intent crimes (p. 38, § IV). A remark made with no such intent fails the third element.'},
+        {tag:'CALLED THE COPS', ans:'s', fact:'Mo hires Ned to burn down a shed. The next morning Mo has a change of heart, calls the police himself, and Ned is arrested before he reaches the shed. Is Mo guilty of solicitation?',
+         why:'At common law, renunciation is not a defense to solicitation. Under the MPC, voluntary renunciation may be a defense, provided the defendant thwarts the commission of the solicited crime (p. 39, § IV.B.3.a; MPC § 5.02(3)). Mo thwarted it, so the jurisdiction’s choice decides the case.'},
+        {tag:'TALKED HIM DOWN', ans:'s', fact:'Ola urges Pat to vandalize a neighbor’s car. An hour later, of her own accord, Ola persuades Pat to drop the plan, and the car is never touched. Is Ola guilty of solicitation?',
+         why:'Ola renounced voluntarily and thwarted the crime herself. That may be a defense under the MPC, but the common law gives no credit for renunciation (p. 39, § IV.B.3.a).'},
+        {tag:'QUIET REGRET', ans:'g', fact:'Quinn asks Rae to steal a laptop, then quietly regrets it but tells no one. Rae is stopped for speeding on the way, and the plan collapses. Is Quinn guilty of solicitation?',
+         why:'This one looks like a SPLIT and is not. The MPC renunciation defense requires that the defendant thwart the crime (p. 39, § IV.B.3.a). The traffic stop thwarted it; Quinn’s private regret did nothing. Quinn is guilty under both approaches.'}
+      ]
+    },
+    {
+      id:2, topic:'Conspiracy', name:'THE AGREEMENT', mech:'shooter', theme:'chain',
+      intro:'<p>Conspiracy is an agreement between two or more persons to accomplish an unlawful purpose, with the intent to accomplish that purpose (Outline p. 39, § IV.C). This level tests whether an agreement, and a conspiracy, actually formed.</p><p>Read the question and the full answers listed under the screen. Then shoot the chain link that carries the right answer. The links descend as the clock runs; if they reach your ship, the question counts as missed.</p>',
+      recap:'How a conspiracy forms. The level covered agreement (including when there is none), the bilateral and unilateral approaches, the Wharton rule, the gap between a supplier’s knowledge and a conspirator’s intent, the effect of a co-defendant’s acquittal, and the overt act requirement.',
+      terms:['Bilateral vs. unilateral conspiracy','Feigned agreement','Wharton rule','Knowledge vs. intent (supplier problem)','Overt act requirement'],
+      items:[
+        {q:'Sam agrees with Tia to rob an armored car. Tia is an undercover agent who only pretended to agree. Under the MPC and the majority approach, what is Sam’s status?',
+         opts:[{s:'Guilty: unilateral',t:'Sam is guilty of conspiracy, because only his own agreement matters under the unilateral approach.'},
+               {s:'Not guilty anywhere',t:'Sam is not guilty anywhere, because every conspiracy needs two genuine agreers.'},
+               {s:'Both are guilty',t:'Sam and Tia are both guilty of conspiracy.'},
+               {s:'Attempt only',t:'Sam can only be charged with attempted robbery.'}],
+         ans:0, why:'The MPC and most state statutes allow a unilateral conspiracy, which can form when the other party merely feigns agreement, e.g., a government agent. At common law (the bilateral approach), Sam would walk on the conspiracy charge (p. 40, § IV.C.2.a).'},
+        {q:'Two people agree to commit adultery, a crime that by definition takes two participants. Nobody else is involved. Under the Wharton rule, what is the result?',
+         opts:[{s:'Conspiracy + adultery',t:'They can be convicted of both conspiracy and adultery.'},
+               {s:'No conspiracy',t:'There is no conspiracy, though they may still be guilty of adultery itself.'},
+               {s:'Nothing at all',t:'They can be convicted of nothing, because the agreement cancels out the crime.'},
+               {s:'Needs overt act',t:'There is a conspiracy, but only once one of them commits an overt act.'}],
+         ans:1, why:'Under the Wharton rule, when a crime requires two or more participants, there is no conspiracy unless more parties than necessary agree. The participants can still be guilty of the underlying crime. The Wharton rule does not apply under the MPC (p. 40, § IV.C.2.c).'},
+        {q:'A hardware store sells rope and duct tape to a customer at the usual price, and the owner knows the customer plans to use them in a kidnapping conspiracy. Which added fact would most likely make the owner a co-conspirator?',
+         opts:[{s:'Heard the plan',t:'The owner overheard the customer describing the entire plan.'},
+               {s:'Cut of the ransom',t:'The owner priced the goods as a percentage of the ransom.'},
+               {s:'Paid in cash',t:'The customer paid in cash.'},
+               {s:'Regular customer',t:'The customer shops at the store every week.'}],
+         ans:1, why:'Knowledge of the conspiracy is not enough. The merchant must take an additional step that shows criminal intent, e.g., charging an exorbitant price, pricing the goods as a percentage of the conspiracy’s "take," or special-ordering goods the merchant does not normally sell (pp. 40-41, § IV.C.4). Overhearing the plan is just more knowledge.'},
+        {q:'Uma wants her neighbors’ burglary scheme to succeed, so she secretly unlocks the victim’s gate the night before. The burglars never learn that she exists. What is Uma’s status?',
+         opts:[{s:'Co-conspirator',t:'She is a co-conspirator, because she shares their objective.'},
+               {s:'Aider, not conspirator',t:'She is not a conspirator, because there was no agreement, but she may be charged with aiding and abetting.'},
+               {s:'Unilateral conspirator',t:'She is a unilateral conspirator under the MPC.'},
+               {s:'No liability',t:'She faces no criminal liability of any kind.'}],
+         ans:1, why:'This is the outline’s exam note: a defendant who shares the objective but helps secretly, without the conspirators’ knowledge, never agreed with anyone, so there is no conspiracy. She can still be charged with aiding and abetting (p. 39, § IV.C.1). Even the unilateral approach needs her to agree to something.'},
+        {q:'Vic and Wade are tried together for conspiracy in a jurisdiction that follows the bilateral approach. The jury acquits Wade, the only other alleged conspirator. What happens to Vic’s charge?',
+         opts:[{s:'Vic is acquitted',t:'Vic cannot be convicted of conspiracy.'},
+               {s:'Vic can be convicted',t:'Vic can still be convicted if the prosecution proves an agreement existed.'},
+               {s:'Becomes attempt',t:'Vic’s charge converts to attempted conspiracy.'},
+               {s:'Retry Wade first',t:'Wade must be retried before Vic’s case can proceed.'}],
+         ans:0, why:'In a bilateral jurisdiction, a conspirator cannot be convicted when all the other conspirators are acquitted at the same trial. The answer differs when co-conspirators are never tried or apprehended; then a conviction is possible if the prosecution proves the conspiracy (p. 40, § IV.C.2.e).'},
+        {q:'Xena and Yuri agree to burn down a rival’s restaurant. The next day, without telling Xena, Yuri buys a can of gasoline, which is perfectly legal. In a majority-rule jurisdiction, when was the conspiracy complete?',
+         opts:[{s:'At the agreement',t:'When they agreed, because no overt act is needed.'},
+               {s:'At the gas purchase',t:'When Yuri bought the gasoline.'},
+               {s:'Not yet: legal act',t:'Not yet, because the overt act must itself be illegal.'},
+               {s:'Not yet: Xena unaware',t:'Not yet, because Xena did not know about the purchase.'}],
+         ans:1, why:'The majority rule and federal law require an overt act. It can be lawful or unlawful, and any co-conspirator can perform it, with or without the others’ knowledge (p. 41, § IV.C.5). The common law, by contrast, needed no overt act at all.'}
+      ]
+    },
+    {
+      id:3, topic:'Conspiracy', name:'THE FALLOUT', mech:'catcher',
+      prompt:'Is the defendant liable?',
+      bins:[{k:'l',label:'LIABLE',sub:'under any rule'},{k:'n',label:'NOT LIABLE',sub:'under any rule'},{k:'s',label:'SPLIT',sub:'depends on the rule'}],
+      intro:'<p>Once a conspiracy exists, the next questions are how far liability reaches and whether anyone can get out. Same gavel, new verdicts. <strong>LIABLE</strong> and <strong>NOT LIABLE</strong> mean the outline gives one answer. <strong>SPLIT</strong> means the outline describes competing rules (e.g., Pinkerton versus the MPC, or the common law versus the majority rule) that come out differently.</p>',
+      recap:'The scope of a conspiracy and the ways out. The level covered liability for co-conspirators’ crimes, chain and hub-and-spoke structures, factual impossibility, and withdrawal, both from the conspiracy itself and from the substantive crimes committed later.',
+      terms:['Pinkerton rule vs. MPC','Chain relationship','Hub-and-spoke relationship','Impossibility in conspiracy','Withdrawal (conspiracy vs. substantive crimes)'],
+      items:[
+        {tag:'GETAWAY CAR', ans:'s', fact:'Abe and Bo conspire to rob a bank. Without Abe’s help or knowledge, Bo steals a car to use as the getaway vehicle. Is Abe liable for the car theft?',
+         why:'Under the Pinkerton rule, a conspirator is liable for all substantive crimes that co-conspirators commit in furtherance of the conspiracy, so Abe is liable. Under the MPC (the minority view), he is not liable unless he aided and abetted the theft (p. 41, § IV.C.6.a, citing Pinkerton v. United States, 328 U.S. 640 (1946)).'},
+        {tag:'DRUG CHAIN', ans:'l', fact:'An importer, a wholesaler, and a street dealer move drugs through a scheme in which none of them has ever met the others. Is the dealer liable for the importer’s acts in furtherance of the scheme?',
+         why:'People who do not know each other can belong to one conspiracy when there is a community of interest, usually found when each person’s role resembles a link in a chain. The outline’s example is a scheme to acquire and distribute drugs, where every member is liable for the others’ acts in furtherance (p. 41, § IV.C.6.c.1).'},
+        {tag:'LOAN HUB', ans:'n', fact:'One loan officer processes fraudulent loan applications submitted by dozens of borrowers who do not know one another. Is borrower #12 liable for borrower #30’s fraudulent loan?',
+         why:'This is the outline’s hub-and-spoke example. The hub and each spoke usually form a separate conspiracy, so the hub is liable for all of them, but the spokes are not liable for one another’s acts (p. 41, § IV.C.6.c.2).'},
+        {tag:'MISSING PAINTING', ans:'l', fact:'Cy and Di agree to steal a painting from a house while the owners travel. They break in at night, but the painting is already gone. Are they liable for conspiracy to commit burglary?',
+         why:'Factual impossibility is not a defense to conspiracy. This is the outline’s own example: both parties remain liable for conspiracy to commit burglary (pp. 41-42, § IV.C.7). Legal impossibility would be different, but only when the objective is not a crime.'},
+        {tag:'COLD FEET', ans:'s', fact:'Ed agrees with Flo to rob a store. Before anyone takes any step toward the robbery, Ed tells Flo he is out. Is Ed liable for conspiracy?',
+         why:'At common law, withdrawal is no defense, because the conspiracy was complete at the agreement. Under the majority and federal rule, no conspiracy exists until an overt act, so notice given before one lets Ed avoid liability. The MPC allows withdrawal only if he voluntarily thwarts the conspiracy’s success (p. 42, § IV.C.8.a).'},
+        {tag:'LATER HEIST', ans:'n', fact:'After the conspiracy has formed, Gil notifies his co-conspirators that he is done and gives no further help. A month later they rob a bank in furtherance of the plan. Is Gil liable as a co-conspirator for the robbery?',
+         why:'A defendant can limit liability for the substantive crimes by withdrawing at any time after formation, e.g., by giving notice to the co-conspirators. Gil still faces the conspiracy charge itself, and he could be liable as an accomplice for later crimes he had aided, but he gave no aid here (p. 42, § IV.C.8.b).'}
+      ]
+    },
+    {
+      id:4, topic:'Attempt', name:'HOW CLOSE?', mech:'ladder',
+      prompt:'How far did the defendant get?',
+      rungs:[{label:'MERE PREPARATION',sub:'No attempt yet'},{label:'SUBSTANTIAL STEP',sub:'Attempt under the MPC test'},{label:'DANGEROUSLY CLOSE',sub:'Attempt even under the common-law test'},{label:'COMPLETED CRIME',sub:'Attempt merges into the crime'}],
+      intro:'<p>Attempt requires a substantial step toward the commission of a crime plus the specific intent to commit it (Outline p. 42, § IV.D). Climb the ladder to the <em>highest</em> rung the facts reach, then lock in. Each rung includes everything below it.</p><p><strong>MERE PREPARATION</strong> is not an attempt. A <strong>SUBSTANTIAL STEP</strong> is an attempt under the MPC, which lists acts that qualify if they corroborate the criminal purpose. <strong>DANGEROUSLY CLOSE</strong> satisfies even the stricter common-law dangerous-proximity test. A <strong>COMPLETED CRIME</strong> absorbs the attempt through merger.</p>',
+      recap:'Where preparation ends and attempt begins. The level covered mere preparation, the MPC’s list of acts that can be a substantial step, the common-law dangerous-proximity test, factual impossibility, and the merger of an attempt into a completed crime.',
+      terms:['Mere preparation','Substantial step (MPC list)','Dangerous-proximity test','Factual impossibility','Merger of attempt'],
+      items:[
+        {ans:0, fact:'Hank decides he will rob a jewelry store someday and buys a city map to study possible targets. He has not picked a store or gone near one.',
+         why:'Conduct done in mere preparation is not a substantial step; the act must be conduct in furtherance of the crime (p. 42, § IV.D.1). A map and a vague "someday" sit on the bottom rung.'},
+        {ans:1, fact:'Intending to burn down his employer’s warehouse, Ira builds an incendiary device designed for the job and stores it in his garage across town.',
+         why:'The MPC lists possession of materials specially designed for committing the crime as a possible substantial step (p. 43, § IV.D.1.a). Sitting in a garage across town, the device is a long way from dangerously close.'},
+        {ans:1, fact:'Intending to kill Jed, Kay drives around Jed’s neighborhood for an hour with a loaded gun, searching for him. She never finds him and goes home.',
+         why:'Searching for the intended victim is on the MPC list of acts that can be a substantial step (p. 43, § IV.D.1.a). Kay never even located Jed, so she never got dangerously close.'},
+        {ans:2, fact:'Lou aims a rifle at Max and pulls the trigger. The shot misses, and Max runs off unharmed.',
+         why:'Lou did everything he could do to complete the crime; only the result failed. That clears the dangerous-proximity test (p. 43, § IV.D.1.b), and no death means no completed murder.'},
+        {ans:2, fact:'Ned shoots Ole, believing Ole is asleep in bed. Ole had actually died of a heart attack an hour earlier.',
+         why:'This is the outline’s own example: the shooter is guilty of attempted murder, not murder. Impossibility caused by circumstances unknown to the defendant is no defense to attempt (p. 43, § IV.D.3).'},
+        {ans:3, fact:'Pia shoots Quint, intending to kill him, and Quint dies from the wound.',
+         why:'If the crime is completed, the attempt merges into it (p. 42, § IV.D). Pia can be charged with both attempt and the completed crime but convicted of only one (p. 44, § IV.D.5).'}
+      ]
+    },
+    {
+      id:5, topic:'Attempt', name:'SECOND THOUGHTS', mech:'shooter', theme:'flame',
+      intro:'<p>Attempt is a specific-intent crime even when the target crime is not, and the defenses are narrower than they look. Shoot the flame-topped target carrying the right answer. Full answers are listed under the screen.</p>',
+      recap:'Attempt’s mental state and its defenses. The level covered the specific-intent requirement, why negligent crimes cannot be attempted, factual versus legal impossibility, and what makes abandonment voluntary, including its effect on an accomplice.',
+      terms:['Specific intent for attempt','No attempt of negligent crimes','Factual vs. legal impossibility','Voluntary abandonment','Abandonment and accomplices'],
+      items:[
+        {q:'Rex drives carelessly and nearly hits a pedestrian, who escapes unhurt. The prosecutor wants to charge attempted involuntary manslaughter. What is the problem?',
+         opts:[{s:'No such crime',t:'There is no attempt to commit a negligent crime, because an act cannot be both intentional and negligent.'},
+               {s:'Needs a death',t:'An attempt charge requires that the victim die.'},
+               {s:'Wrong test',t:'The prosecutor must use the dangerous-proximity test.'},
+               {s:'No problem',t:'None. The charge works.'}],
+         ans:0, why:'There is no attempt to commit negligent crimes like involuntary manslaughter, because a defendant’s act cannot be both intentional and negligent (p. 43, § IV.D.2).'},
+        {q:'Completed arson requires only malice. Sue is charged with attempted arson. What mental state must the prosecution prove?',
+         opts:[{s:'Malice',t:'Malice, the same as for completed arson.'},
+               {s:'Specific intent',t:'The specific intent to commit the arson.'},
+               {s:'Recklessness',t:'Recklessness about the risk of fire.'},
+               {s:'None',t:'No mental state, because attempt is a strict-liability offense.'}],
+         ans:1, why:'Arson is not a specific-intent crime, but attempted arson is. The same holds for an attempt to commit a strict-liability crime (p. 43, § IV.D.2).'},
+        {q:'Tom wrongly believes it is a crime to carry more than $10,000 in cash across town. He does it anyway, hoping to break that "law." Is Tom guilty of attempt?',
+         opts:[{s:'Guilty: no defense',t:'Yes. Impossibility is never a defense to attempt.'},
+               {s:'Not guilty: legal',t:'No. The act he intended is not a crime, which is legal impossibility.'},
+               {s:'Guilty: factual',t:'Yes. This is factual impossibility, which is no defense.'},
+               {s:'Only if a step',t:'Only if carrying the cash was a substantial step.'}],
+         ans:1, why:'If the act intended is not a crime, the defendant is not guilty of attempt. Even statutes that claim to abolish impossibility defenses typically preserve legal impossibility (p. 43, § IV.D.3).'},
+        {q:'Uri slips his hand into a stranger’s coat pocket to steal a wallet. The pocket is empty. Is Uri guilty of attempted larceny?',
+         opts:[{s:'Yes',t:'Yes. The impossibility came from circumstances Uri did not know about.'},
+               {s:'No: nothing there',t:'No. Nobody can attempt to steal something that is not there.'},
+               {s:'No: legal',t:'No. This is legal impossibility.'},
+               {s:'Larceny, not attempt',t:'He is guilty of completed larceny instead.'}],
+         ans:0, why:'Impossibility is not a defense when the attempted crime is factually impossible because of circumstances unknown to the defendant (p. 43, § IV.D.3). Stealing a wallet is a crime; the wallet’s absence is a fact Uri did not know.'},
+        {q:'Val pries open a store’s back door to burglarize it, then spots a patrol car and runs. Her state recognizes voluntary abandonment. Does she have a defense to attempted burglary?',
+         opts:[{s:'Yes: she stopped',t:'Yes. She stopped before taking anything.'},
+               {s:'No: avoiding detection',t:'No. Abandonment motivated by a desire to avoid detection is not voluntary.'},
+               {s:'Yes: no harm done',t:'Yes. Nobody was harmed.'},
+               {s:'Yes: common law',t:'Yes, but only under the common law.'}],
+         ans:1, why:'Even where voluntary abandonment is a defense, abandonment is not voluntary if motivated by a desire to avoid detection, a decision to wait for a better time, or a switch to another similar objective or victim (p. 43, § IV.D.4). And the common law generally allows no abandonment once the actus reus is complete.'},
+        {q:'Wes is about to break into a house while his accomplice Zoe keeps watch. Wes has a genuine change of heart and walks away. Zoe did not join in the abandonment. Assume voluntary abandonment is recognized. Who can use it?',
+         opts:[{s:'Both of them',t:'Both. Zoe gets the benefit of Wes’s abandonment.'},
+               {s:'Wes only',t:'Wes only. Zoe did not join in the abandonment.'},
+               {s:'Zoe only',t:'Zoe only, because she never approached the house.'},
+               {s:'Neither',t:'Neither. Abandonment is never a defense.'}],
+         ans:1, why:'Abandonment by the defendant is not a defense for an accomplice who did not join in the abandonment or withdrawal (p. 43, § IV.D.4).'}
+      ]
+    },
+    {
+      id:6, topic:'Merger', name:'THE MERGER MONSTER', mech:'shooter', theme:'boss', boss:true,
+      intro:'<p>The boss feeds on double convictions. Every right answer knocks down part of its shield. The question is always the same in disguise: which charges survive, and which merge? (Outline p. 38, § IV.A, plus the merger notes for each offense.)</p><p>Remember the outline’s exam tip: solicitation and attempt merge into the completed crime, but conspiracy does not.</p>',
+      recap:'Which inchoate charges merge and which survive. The level covered merger of solicitation and attempt into the completed crime, the survival of conspiracy, the MPC’s limit on punishment for multiple inchoate offenses, the common-law treatment of conspiracy plus attempt, traditional felony-misdemeanor merger, and lesser included offenses.',
+      terms:['Merger of solicitation and attempt','Conspiracy does not merge','MPC § 5.05(3)','Felony-misdemeanor merger (traditional)','Lesser included offenses (double jeopardy)'],
+      items:[
+        {q:'Ana asks Ben to kill her husband. Ben agrees, and then he does it. What can Ana be convicted of?',
+         opts:[{s:'Solicitation + murder',t:'Solicitation and murder.'},{s:'Conspiracy + murder',t:'Conspiracy to commit murder and murder.'},{s:'All three',t:'Solicitation, conspiracy, and murder.'},{s:'Murder only',t:'Murder only.'}],
+         ans:1, why:'This is the outline’s bar example carried to the end. The solicitation merges into the murder; the conspiracy does not merge. Ana faces conspiracy and murder, but not solicitation (p. 39, example in § IV.B.3).'},
+        {q:'Ana asks Ben to kill her husband, and Ben refuses. What can Ana be charged with?',
+         opts:[{s:'Solicitation',t:'Solicitation.'},{s:'Conspiracy',t:'Conspiracy to commit murder.'},{s:'Attempted murder',t:'Attempted murder.'},{s:'Nothing',t:'Nothing, because Ben refused.'}],
+         ans:0, why:'With no agreement there is no conspiracy, and with no completed crime there is nothing for the solicitation to merge into. Solicitation stands alone (p. 39, example in § IV.B.3).'},
+        {q:'Cole attempts a robbery and succeeds. He is charged with both attempted robbery and robbery. What is the most he can be convicted of?',
+         opts:[{s:'Both crimes',t:'Both attempted robbery and robbery.'},{s:'Only one',t:'Only one of the two.'},{s:'Attempt only',t:'Only the attempt.'},{s:'Nothing',t:'Nothing, because charging both violates merger.'}],
+         ans:1, why:'A defendant who completes a crime may be charged with both the attempt and the completed crime but convicted of only one (p. 44, § IV.D.5).'},
+        {q:'Dina and Eve conspire to commit arson and then burn the building down. Do the conspiracy and arson convictions merge?',
+         opts:[{s:'Yes: into arson',t:'Yes. The conspiracy merges into the arson.'},{s:'No: both stand',t:'No. Both convictions stand.'},{s:'Yes: into conspiracy',t:'Yes. The arson merges into the conspiracy.'},{s:'Only sans overt act',t:'They merge only if no overt act was required.'}],
+         ans:1, why:'Unlike solicitation or attempt, a conspiracy conviction does not merge into a conviction for the completed crime (p. 38, Exam Tip in § IV.A).'},
+        {q:'Under the MPC, Finn solicits, conspires to commit, and attempts the same burglary. Which statement is correct?',
+         opts:[{s:'Punish all three',t:'He may be prosecuted and punished for all three.'},{s:'Try all, punish one',t:'He may be prosecuted concurrently for all three but not punished for more than one.'},{s:'Try only one',t:'He may be prosecuted for only one.'},{s:'Attempt absorbs one',t:'Attempt absorbs the solicitation, and the other two stand.'}],
+         ans:1, why:'Under the MPC, a defendant may be concurrently prosecuted, but not punished, for more than one inchoate offense based on conduct designed to culminate in the same crime (p. 38, § IV.A, citing MPC § 5.05(3)).'},
+        {q:'In a common-law jurisdiction, Gail is convicted of conspiracy to rob and attempted robbery for the same scheme. Do the two merge?',
+         opts:[{s:'Yes: into attempt',t:'Yes. The conspiracy merges into the attempt.'},{s:'No: both stand',t:'No. At common law, conspiracy and attempt do not merge.'},{s:'Yes: into conspiracy',t:'Yes. The attempt merges into the conspiracy.'},{s:'Only if robbed',t:'They merge only if the robbery was completed.'}],
+         ans:1, why:'At common law, conspiracy and attempt do not merge (p. 38, § IV.A).'},
+        {q:'Under the traditional merger doctrine, Hal’s conduct constitutes both a felony and a misdemeanor. What happens?',
+         opts:[{s:'Misdemeanor merges',t:'He can be convicted of the felony but not the misdemeanor.'},{s:'Felony merges',t:'He can be convicted of the misdemeanor but not the felony.'},{s:'Both stand',t:'He can be convicted of both.'},{s:'Neither stands',t:'He can be convicted of neither.'}],
+         ans:0, why:'Traditionally, a misdemeanor merged into a felony arising from the same conduct. Crimes of the same degree did not merge (p. 38, § IV.A).'},
+        {q:'Modern law has abandoned one form of merger. Which one?',
+         opts:[{s:'Felony-misdemeanor',t:'Merger based on the felony-misdemeanor distinction.'},{s:'Solicitation merger',t:'Merger of solicitation into the completed crime.'},{s:'Attempt merger',t:'Merger of attempt into the completed crime.'},{s:'Lesser included',t:'Merger of a lesser included offense into the greater.'}],
+         ans:0, why:'Modern law does not follow merger based on the felony-misdemeanor distinction, but it still merges solicitation and attempt into the completed crime (p. 38, § IV.A). The lesser-included rule lives on through double jeopardy.'},
+        {q:'Ivan is convicted of robbery. Can he also be convicted of larceny for the same taking?',
+         opts:[{s:'Yes: separate',t:'Yes. They are separate crimes.'},{s:'No: lesser included',t:'No. Larceny is a lesser included offense of robbery.'},{s:'Yes: two trials',t:'Yes, as long as he is tried separately for each.'},{s:'Only if conspired',t:'Only if he conspired with someone.'}],
+         ans:1, why:'The Double Jeopardy Clause generally bars conviction for both the underlying crime and a lesser included offense, and the outline’s example is robbery and larceny. Many jurisdictions call this a "merger" too (p. 38, § IV.A.1).'},
+        {q:'Jade solicits Kurt to commit arson, and Kurt does it. May the state try Jade for both the solicitation and the arson?',
+         opts:[{s:'Try both, punish one',t:'Yes, she may be tried for both, but not punished for both.'},{s:'Cannot even try',t:'No. She cannot even be tried for both.'},{s:'Punish both',t:'Yes, and she may be punished for both.'},{s:'Solicitation only',t:'Only the solicitation may be tried.'}],
+         ans:0, why:'A defendant may be tried, but not punished, for solicitation and the completed crime. The solicitation merges into the arson (p. 38, § IV.A).'}
+      ]
+    }
+  ];
+
+
+  // ---------- helpers ----------
+  function $(id){ return document.getElementById(id); }
+  function showScreen(id){
+    var s = document.querySelectorAll('.screen');
+    for(var i=0;i<s.length;i++) s[i].classList.remove('active');
+    $(id).classList.add('active');
+    window.scrollTo(0,0);
+  }
+  function shuffle(arr){ var a=arr.slice(); for(var i=a.length-1;i>0;i--){ var j=Math.floor(Math.random()*(i+1)); var t=a[i]; a[i]=a[j]; a[j]=t; } return a; }
+  function words(s){ return String(s).replace(/<[^>]+>/g,' ').trim().split(/\s+/).length; }
+  function esc(s){ return String(s).replace(/[&<>"']/g,function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+  function fmt(n){ return Number(n).toLocaleString('en-US'); }
+  var LETTERS = ['A','B','C','D','E'];
+
+  // ---------- state ----------
+  var START_LIVES = 3, MAX_LIVES = 6;
+  var state;
+  function freshState(){
+    var st = {};
+    LEVELS.forEach(function(l){ st[l.id] = {correct:0, answered:0, skipped:0, total:l.items.length}; });
+    return { score:0, lives:START_LIVES, levelIdx:-1, itemIdx:0, order:[], streak:0, bestStreak:0, levelStreak:0,
+             levelMistakes:0, streakLifeGiven:false, stats:st, phase:'idle', teacher:false, teacherUsed:false,
+             paused:false, outcome:null, diedAt:null };
+  }
+  state = freshState();
+
+  function updateHud(){
+    $('hud-score').textContent = fmt(state.score);
+    $('hud-level').textContent = state.levelIdx >= 0 ? (state.levelIdx+1) : '-';
+    $('hud-streak').textContent = state.streak;
+    var h=''; for(var i=0;i<MAX_LIVES;i++){ h += i < state.lives ? '♥' : '♡'; }
+    $('hud-lives').textContent = state.teacher ? h + ' ∞' : h;
+    $('hud-lives').parentNode.setAttribute('aria-label', 'Lives: ' + state.lives + ' of ' + MAX_LIVES);
+  }
+  function addScore(n){ state.score = Math.max(0, state.score + n); updateHud(); }
+  function gainLife(){
+    if(state.lives < MAX_LIVES){ state.lives++; updateHud(); playExtraLifeJingle(); return true; }
+    addScore(150); return false;
+  }
+  function loseLife(){
+    if(state.teacher) return;
+    state.lives = Math.max(0, state.lives - 1); updateHud();
+  }
+  function flash(text, color){
+    var el = $('flash'); el.textContent = text; el.style.color = color || 'var(--yellow)';
+    el.classList.remove('show'); void el.offsetWidth; el.classList.add('show');
+  }
+
+  // ---------- audio ----------
+  var actx = null;
+  function beep(freq, dur, type){
+    try{
+      if(!actx){ actx = new (window.AudioContext || window.webkitAudioContext)(); }
+      var o = actx.createOscillator(), g = actx.createGain();
+      o.type = type || 'square'; o.frequency.value = freq; g.gain.value = 0.05;
+      o.connect(g); g.connect(actx.destination); o.start();
+      g.gain.exponentialRampToValueAtTime(0.0001, actx.currentTime + (dur||0.12));
+      o.stop(actx.currentTime + (dur||0.12) + 0.02);
+    }catch(e){}
+  }
+  function playJingle(notes, dur, gap, type){ notes.forEach(function(f,i){ setTimeout(function(){ beep(f,dur,type); }, i*gap); }); }
+  function sfxCorrect(){ beep(880,0.09,'square'); setTimeout(function(){ beep(1320,0.12,'square'); },70); }
+  function sfxWrong(){ beep(180,0.22,'sawtooth'); }
+  function sfxClick(){ beep(440,0.05,'triangle'); }
+  function sfxShot(){ beep(1200,0.05,'square'); }
+  function playStartJingle(){ playJingle([523.25,659.25,783.99,1046.5],0.14,110,'square'); }
+  function playVictoryJingle(){ playJingle([523.25,523.25,523.25,659.25,783.99,1046.5,1318.51],0.15,105,'square'); }
+  function playGameOverJingle(){ playJingle([392,349.23,293.66,233.08,196],0.32,190,'sawtooth'); }
+  function playExtraLifeJingle(){ playJingle([659.25,830.61,987.77,1318.51],0.11,90,'square'); }
+
+  // ---------- pace ----------
+  var PACE_MODE = 'standard'; // 'standard' | 'relaxed' | 'slow'
+  var PACES = [
+    {k:'standard', label:'STANDARD', desc:'STANDARD: normal arcade timing'},
+    {k:'relaxed', label:'RELAXED (+60%)', desc:'RELAXED: 60% more time on every clock'},
+    {k:'slow', label:'30% SPEED', desc:'30% SPEED: every clock runs at 30% of standard speed'}
+  ];
+  function paceMult(){ return PACE_MODE === 'relaxed' ? 1.6 : (PACE_MODE === 'slow' ? (1/0.3) : 1); }
+  function renderPaceChips(){
+    ['pace-chips-brief','pace-chips-dlg'].forEach(function(cid){
+      var c = $(cid); c.innerHTML = '';
+      PACES.forEach(function(p){
+        var b = document.createElement('span');
+        b.className = 'chip' + (p.k === PACE_MODE ? ' active' : '');
+        b.setAttribute('role','button'); b.setAttribute('tabindex','0');
+        b.setAttribute('aria-pressed', p.k === PACE_MODE ? 'true' : 'false');
+        b.textContent = p.desc;
+        b.addEventListener('click', function(){ setPace(p.k); });
+        b.addEventListener('keydown', function(e){ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); setPace(p.k); } });
+        c.appendChild(b);
+      });
+    });
+  }
+  function setPace(k){
+    PACE_MODE = k; sfxClick();
+    PACES.forEach(function(p){ if(p.k===k) $('hud-pace-label').textContent = p.label; });
+    rescaleTimer(); renderPaceChips(); updateGateLabel();
+  }
+
+  // ---------- timer (shared by all mechanics) ----------
+  var T = null;
+  function newTimer(baseMs){ T = {base:baseMs, total:baseMs*paceMult(), elapsed:0}; }
+  function rescaleTimer(){
+    if(!T) return;
+    var f = T.total ? T.elapsed / T.total : 0;
+    T.total = T.base * paceMult(); T.elapsed = f * T.total;
+  }
+  function frac(){ return T ? Math.min(1, T.elapsed / T.total) : 0; }
+
+  function itemBaseMs(level, item, i){
+    if(level.mech === 'catcher'){
+      var extra = Math.max(0, words(item.fact) - 30) * 400;
+      return Math.max(14000 + extra, 18000 + extra - i*400);
+    }
+    if(level.mech === 'ladder'){
+      return Math.max(25000, (words(item.fact) + 24) * 550);
+    }
+    var w = words(item.q); item.opts.forEach(function(o){ w += words(o.t); });
+    return Math.max(35000, w * 600);
+  }
+  function updateGateLabel(){
+    if(state.levelIdx < 0) return;
+    var lv = LEVELS[state.levelIdx], sum = 0;
+    lv.items.forEach(function(it,i){ sum += itemBaseMs(lv, it, i); });
+    var secs = Math.round(sum / lv.items.length * paceMult() / 1000);
+    var unit = lv.mech === 'catcher' ? 'CARD' : 'QUESTION';
+    $('btn-begin').textContent = "▶ I'VE READ THIS. BEGIN (ABOUT " + secs + ' SEC PER ' + unit + ')';
+  }
+
+  // ---------- canvas ----------
+  var cv = $('game'), ctx = cv.getContext('2d');
+  var W = cv.width, H = cv.height;
+  function wrap(text, maxW, font){
+    ctx.font = font; var ws = String(text).split(' '), lines = [], cur = '';
+    ws.forEach(function(w){ var t = cur ? cur + ' ' + w : w; if(ctx.measureText(t).width > maxW && cur){ lines.push(cur); cur = w; } else cur = t; });
+    if(cur) lines.push(cur); return lines;
+  }
+  function rr(x,y,w,h,r){ ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); }
+  function drawStars(t){
+    ctx.fillStyle = '#050308'; ctx.fillRect(0,0,W,H);
+    for(var i=0;i<40;i++){ var x=(i*97)%W, y=((i*53)+t*0.01*(1+i%3))%H; ctx.fillStyle = i%5===0 ? '#4bf3ff55' : '#ffffff22'; ctx.fillRect(x,y,2,2); }
+  }
+  function canvasPoint(e){
+    var r = cv.getBoundingClientRect();
+    return { x:(e.clientX - r.left) * (W / r.width), y:(e.clientY - r.top) * (H / r.height) };
+  }
+
+  // =========================================================
+  // ENGINE 1: CATCHER
+  // =========================================================
+  var Catcher = {
+    setup: function(level, item){
+      this.level = level; this.item = item; this.p = 1; this.px = this.binX(1);
+      this.slam = null; this.y = this.topY;
+      $('controls-hint').textContent = '← → move the gavel · ↓ or SPACE slams early · or click a bin';
+    },
+    binX: function(i){ return W/6 + i*W/3; },
+    topY: 70, catchY: 288,
+    update: function(dt){
+      var tx = this.binX(this.p), d = tx - this.px, step = 1100 * dt/1000;
+      this.px = Math.abs(d) <= step ? tx : this.px + Math.sign(d)*step;
+      if(this.slam){
+        this.slam.prog += dt/350;
+        this.y = this.slam.fromY + (this.catchY - this.slam.fromY) * Math.min(1, this.slam.prog);
+        if(this.slam.prog >= 1) this.land();
+      } else {
+        this.y = this.topY + (this.catchY - this.topY) * frac();
+        if(frac() >= 1) this.land();
+      }
+    },
+    land: function(){
+      var between = Math.abs(this.px - this.binX(this.p)) > 24;
+      var bonusFrac = this.slam ? this.slam.atFrac : 1;
+      if(between) resolve(null, {between:true});
+      else resolve(this.level.bins[this.p].k, {speed:1-bonusFrac});
+    },
+    doSlam: function(){ if(this.slam) return; this.slam = {prog:0, fromY:this.y, atFrac:frac()}; sfxClick(); },
+    key: function(k){
+      if(k==='ArrowLeft'){ if(this.p>0){ this.p--; sfxClick(); } return true; }
+      if(k==='ArrowRight'){ if(this.p<2){ this.p++; sfxClick(); } return true; }
+      if(k==='ArrowDown' || k===' '){ this.doSlam(); return true; }
+      return false;
+    },
+    click: function(pt){
+      if(this.slam) return;
+      var i = Math.max(0, Math.min(2, Math.floor(pt.x / (W/3))));
+      this.p = i; this.px = this.binX(i); this.doSlam();
+    },
+    reveal: function(){ return this.level.bins.filter(function(b){ return b.k===this.item.ans; }, this)[0]; },
+    draw: function(t){
+      drawStars(t);
+      var lv = this.level, self = this;
+      lv.bins.forEach(function(b,i){
+        var x = i*W/3 + 8, w = W/3 - 16, y = 330, h = 80;
+        var hot = (i === self.p);
+        ctx.fillStyle = hot ? '#2a1f4f' : '#140f24'; rr(x,y,w,h,10); ctx.fill();
+        ctx.lineWidth = 3; ctx.strokeStyle = ['#39ff88','#ff5a5a','#ffe14b'][i]; rr(x,y,w,h,10); ctx.stroke();
+        ctx.fillStyle = ['#39ff88','#ff5a5a','#ffe14b'][i]; ctx.textAlign = 'center';
+        ctx.font = '13px "Press Start 2P", monospace'; ctx.fillText(b.label, x+w/2, y+34);
+        ctx.fillStyle = '#d8d3ff'; ctx.font = 'bold 14px "Courier New", monospace'; ctx.fillText(b.sub, x+w/2, y+58);
+      });
+      // gavel paddle
+      ctx.fillStyle = '#c8971a'; rr(this.px-70, 300, 140, 16, 6); ctx.fill();
+      ctx.fillStyle = '#8a5a12'; ctx.fillRect(this.px-8, 316, 16, 10);
+      // falling card
+      var lines = wrap(this.item.tag, 190, '12px "Press Start 2P", monospace');
+      var ch = 26 + lines.length*20, cw = 210, cx = this.px - cw/2, cy = this.y - ch + 12;
+      ctx.fillStyle = '#1b1438'; rr(cx, cy, cw, ch, 8); ctx.fill();
+      ctx.strokeStyle = '#4bf3ff'; ctx.lineWidth = 3; rr(cx, cy, cw, ch, 8); ctx.stroke();
+      ctx.fillStyle = '#ecebff'; ctx.textAlign = 'center'; ctx.font = '12px "Press Start 2P", monospace';
+      lines.forEach(function(l,i){ ctx.fillText(l, cx+cw/2, cy+26+i*20); });
+      ctx.textAlign = 'left';
+    }
+  };
+
+  // =========================================================
+  // ENGINE 2: SHOOTER
+  // =========================================================
+  var Shooter = {
+    setup: function(level, item){
+      this.level = level; this.item = item; this.n = item.opts.length;
+      this.shipX = W/2; this.bullet = null; this.auto = -1; this.held = {}; this.t0 = performance.now();
+      this.hitFx = null;
+      $('controls-hint').textContent = '← → move · SPACE fires · or press A-' + LETTERS[this.n-1] + ' (or click a target) to auto-aim';
+      var ol = $('optlist'); ol.innerHTML = '';
+      item.opts.forEach(function(o,i){ var li = document.createElement('li'); li.innerHTML = '<b>' + LETTERS[i] + '</b>' + o.t; ol.appendChild(li); });
+    },
+    shipY: 392,
+    targets: function(){
+      var n = this.n, margin = 30, slot = (W - margin*2) / n, tw = slot - 18, th = 72;
+      var sway = Math.sin((performance.now() - this.t0)/1100) * 18;
+      var top = this.level.boss ? 96 : 40, bottom = 270;
+      var y0 = top + (bottom - top) * frac(), out = [];
+      for(var i=0;i<n;i++){ out.push({x: margin + i*slot + 9 + sway, y: y0 + (i%2)*28, w: tw, h: th}); }
+      return out;
+    },
+    update: function(dt){
+      var s = dt/1000;
+      if(this.auto >= 0){
+        var tg = this.targets()[this.auto], cx = tg.x + tg.w/2, d = cx - this.shipX, step = 900*s;
+        this.shipX = Math.abs(d) <= step ? cx : this.shipX + Math.sign(d)*step;
+        if(Math.abs(cx - this.shipX) < 4 && !this.bullet) this.fire();
+      } else {
+        if(this.held.ArrowLeft) this.shipX -= 380*s;
+        if(this.held.ArrowRight) this.shipX += 380*s;
+      }
+      this.shipX = Math.max(22, Math.min(W-22, this.shipX));
+      if(this.bullet){
+        this.bullet.y -= 820*s;
+        var ts = this.targets();
+        for(var i=0;i<ts.length;i++){
+          var t = ts[i];
+          if(this.bullet.x >= t.x && this.bullet.x <= t.x+t.w && this.bullet.y <= t.y+t.h && this.bullet.y >= t.y){
+            this.bullet = null; var f = frac(); resolve(i, {speed:1-f}); return;
+          }
+        }
+        if(this.bullet && this.bullet.y < 0) this.bullet = null;
+      }
+      if(frac() >= 1) resolve(null, {timeout:true});
+    },
+    fire: function(){ if(this.bullet) return; this.bullet = {x:this.shipX, y:this.shipY-8}; sfxShot(); },
+    key: function(k, down){
+      if(k==='ArrowLeft' || k==='ArrowRight'){ this.held[k] = down; if(down) this.auto = -1; return true; }
+      if(!down) return false;
+      if(k===' '){ this.fire(); return true; }
+      var idx = LETTERS.indexOf(k.toUpperCase());
+      if(k.length===1 && idx >= 0 && idx < this.n){ this.auto = idx; sfxClick(); return true; }
+      return false;
+    },
+    click: function(pt){
+      var ts = this.targets();
+      for(var i=0;i<ts.length;i++){ var t=ts[i]; if(pt.x>=t.x-6 && pt.x<=t.x+t.w+6 && pt.y>=t.y-10 && pt.y<=t.y+t.h+10){ this.auto = i; sfxClick(); return; } }
+    },
+    reveal: function(){ return this.item.ans; },
+    draw: function(t){
+      drawStars(t);
+      var lv = this.level, theme = lv.theme;
+      if(lv.boss){
+        var cleared = state.stats[lv.id].correct, tot = lv.items.length, pct = 1 - cleared/tot;
+        ctx.fillStyle = '#ff3ec8'; ctx.beginPath(); ctx.ellipse(W/2, 40, 90, 26, 0, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = '#ffe14b'; ctx.fillRect(W/2-40, 32, 14, 10); ctx.fillRect(W/2+26, 32, 14, 10);
+        ctx.fillStyle = '#ecebff'; ctx.font = '9px "Press Start 2P", monospace'; ctx.textAlign = 'center';
+        ctx.fillText('MERGER MONSTER', W/2, 80);
+        ctx.fillStyle = '#1a1530'; ctx.fillRect(W-180, 12, 160, 12);
+        ctx.fillStyle = '#4bf3ff'; ctx.fillRect(W-180, 12, 160*pct, 12);
+        ctx.strokeStyle = '#ecebff'; ctx.lineWidth = 1; ctx.strokeRect(W-180, 12, 160, 12);
+        ctx.textAlign = 'left'; ctx.fillStyle = '#4bf3ff'; ctx.fillText('SHIELD', W-180, 38);
+      }
+      var ts = this.targets(), self = this;
+      ts.forEach(function(tg,i){
+        var col = theme==='flame' ? '#ff9a3c' : (theme==='boss' ? '#ff3ec8' : '#4bf3ff');
+        ctx.fillStyle = (i===self.auto) ? '#2a1f4f' : '#140f24';
+        rr(tg.x, tg.y, tg.w, tg.h, theme==='chain' ? 26 : 8); ctx.fill();
+        ctx.lineWidth = 3; ctx.strokeStyle = col; rr(tg.x, tg.y, tg.w, tg.h, theme==='chain' ? 26 : 8); ctx.stroke();
+        if(theme==='chain' && i < ts.length-1){ ctx.strokeStyle = '#6a63a0'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(tg.x+tg.w, tg.y+tg.h/2); ctx.lineTo(ts[i+1].x, ts[i+1].y+ts[i+1].h/2); ctx.stroke(); }
+        if(theme==='flame'){ var fx = tg.x+tg.w/2, fy = tg.y; ctx.fillStyle = (Math.floor(t/150)%2) ? '#ffe14b' : '#ff5a5a'; ctx.beginPath(); ctx.moveTo(fx-10,fy); ctx.quadraticCurveTo(fx-4,fy-18,fx,fy-24); ctx.quadraticCurveTo(fx+4,fy-18,fx+10,fy); ctx.fill(); }
+        ctx.fillStyle = '#ffe14b'; ctx.font = '12px "Press Start 2P", monospace'; ctx.textAlign = 'center';
+        ctx.fillText(LETTERS[i], tg.x + tg.w/2, tg.y + 18);
+        var lines = wrap(self.item.opts[i].s, tg.w - 12, 'bold 14px "Courier New", monospace');
+        ctx.fillStyle = '#ecebff';
+        lines.slice(0,3).forEach(function(l,j){ ctx.fillText(l, tg.x + tg.w/2, tg.y + 36 + j*15); });
+      });
+      // ship
+      var sx = this.shipX, sy = this.shipY;
+      ctx.fillStyle = '#39ff88'; ctx.beginPath(); ctx.moveTo(sx, sy-16); ctx.lineTo(sx+20, sy+14); ctx.lineTo(sx-20, sy+14); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = '#4bf3ff'; ctx.fillRect(sx-3, sy-22, 6, 8);
+      if(this.bullet){ ctx.fillStyle = '#ffe14b'; ctx.fillRect(this.bullet.x-2, this.bullet.y-10, 4, 12); }
+      ctx.textAlign = 'left';
+    }
+  };
+
+  // =========================================================
+  // ENGINE 3: LADDER
+  // =========================================================
+  var Ladder = {
+    setup: function(level, item){
+      this.level = level; this.item = item; this.c = 0; this.cy = this.rungY(0);
+      $('controls-hint').textContent = '↑ ↓ climb · SPACE or ENTER locks in · or click a rung';
+    },
+    rungY: function(i){ return 360 - i*92; },
+    update: function(dt){
+      var ty = this.rungY(this.c), d = ty - this.cy, step = 700*dt/1000;
+      this.cy = Math.abs(d) <= step ? ty : this.cy + Math.sign(d)*step;
+      if(frac() >= 1) resolve(null, {timeout:true});
+    },
+    key: function(k){
+      if(k==='ArrowUp'){ if(this.c<3){ this.c++; sfxClick(); } return true; }
+      if(k==='ArrowDown'){ if(this.c>0){ this.c--; sfxClick(); } return true; }
+      if(k===' ' || k==='Enter'){ resolve(this.c, {speed:1-frac()}); return true; }
+      return false;
+    },
+    click: function(pt){
+      var best = 0, bd = 1e9;
+      for(var i=0;i<4;i++){ var d = Math.abs(pt.y - (this.rungY(i)-16)); if(d<bd){ bd=d; best=i; } }
+      this.c = best; this.cy = this.rungY(best); resolve(best, {speed:1-frac()});
+    },
+    reveal: function(){ return this.item.ans; },
+    draw: function(t){
+      drawStars(t);
+      var self = this, cols = ['#8b84b8','#4bf3ff','#ffe14b','#39ff88'];
+      ctx.strokeStyle = '#6a63a0'; ctx.lineWidth = 6;
+      ctx.beginPath(); ctx.moveTo(92, 20); ctx.lineTo(92, 400); ctx.moveTo(150, 20); ctx.lineTo(150, 400); ctx.stroke();
+      this.level.rungs.forEach(function(r,i){
+        var y = self.rungY(i);
+        ctx.strokeStyle = '#6a63a0'; ctx.lineWidth = 6; ctx.beginPath(); ctx.moveTo(92,y); ctx.lineTo(150,y); ctx.stroke();
+        var hot = (i===self.c);
+        ctx.fillStyle = hot ? '#2a1f4f' : '#140f24'; rr(176, y-54, W-200, 62, 10); ctx.fill();
+        ctx.lineWidth = 3; ctx.strokeStyle = cols[i]; rr(176, y-54, W-200, 62, 10); ctx.stroke();
+        ctx.fillStyle = cols[i]; ctx.font = '13px "Press Start 2P", monospace'; ctx.fillText((i+1) + '. ' + r.label, 194, y-26);
+        ctx.fillStyle = '#d8d3ff'; ctx.font = 'bold 15px "Courier New", monospace'; ctx.fillText(r.sub, 194, y-6);
+      });
+      var x = 121, y = this.cy - 20;
+      ctx.fillStyle = '#ff3ec8'; ctx.beginPath(); ctx.arc(x, y-22, 9, 0, Math.PI*2); ctx.fill();
+      ctx.fillRect(x-8, y-12, 16, 22);
+      ctx.fillStyle = '#ffe14b'; ctx.fillRect(x-14, y-8, 6, 4); ctx.fillRect(x+8, y-8, 6, 4);
+    }
+  };
+
+  var ENGINES = {catcher:Catcher, shooter:Shooter, ladder:Ladder};
+  function eng(){ return ENGINES[LEVELS[state.levelIdx].mech]; }
+  function curLevel(){ return LEVELS[state.levelIdx]; }
+  function curItem(){ return curLevel().items[state.order[state.itemIdx]]; }
+
+  // ---------- main loop ----------
+  var lastTs = performance.now();
+  function loop(ts){
+    var dt = Math.min(60, ts - lastTs); lastTs = ts;
+    if(state.levelIdx >= 0 && $('screen-level').classList.contains('active') && $('lvl-play').style.display !== 'none'){
+      var e = eng();
+      if(state.phase === 'play' && !state.paused){ T.elapsed += dt; e.update(dt); }
+      if(state.phase === 'play' || state.phase === 'feedback'){ e.draw(ts); }
+      if(T){
+        var left = Math.max(0, T.total - T.elapsed);
+        $('timerbar').style.width = (100*(1-frac())) + '%';
+        $('timerbar').style.background = frac() > 0.75 ? 'var(--red)' : (frac() > 0.5 ? 'var(--yellow)' : 'var(--cyan)');
+        if(state.phase === 'play') $('lvl-clock').textContent = Math.ceil(left/1000) + ' SEC' + (state.paused ? ' (PAUSED)' : '');
+      }
+    }
+    requestAnimationFrame(loop);
+  }
+  requestAnimationFrame(loop);
+
+  // ---------- level flow ----------
+  function startLevel(idx){
+    state.levelIdx = idx; state.itemIdx = 0; state.levelStreak = 0; state.levelMistakes = 0; state.streakLifeGiven = false;
+    var lv = LEVELS[idx];
+    var st = state.stats[lv.id]; st.correct = 0; st.answered = 0; st.skipped = 0;
+    state.order = shuffle(lv.items.map(function(_,i){ return i; }));
+    state.phase = 'gate'; T = null;
+    $('lvl-title').textContent = 'LEVEL ' + (idx+1) + ': ' + lv.name + (lv.boss ? ' (BOSS)' : '');
+    $('lvl-gate-head').textContent = 'How this level works · ' + lv.topic;
+    $('lvl-intro').innerHTML = lv.intro;
+    $('lvl-gate').style.display = 'block'; $('lvl-play').style.display = 'none';
+    updateGateLabel(); updateHud();
+    showScreen('screen-level');
+  }
+  function beginLevel(){
+    sfxClick(); playStartJingle();
+    $('lvl-gate').style.display = 'none'; $('lvl-play').style.display = 'block';
+    startItem();
+  }
+  function startItem(){
+    var lv = curLevel(), it = curItem();
+    try{ if(document.activeElement && document.activeElement.blur) document.activeElement.blur(); }catch(e){}
+    $('feedback').style.display = 'none';
+    $('optlist').innerHTML = '';
+    $('lvl-progress').textContent = (lv.mech==='catcher' ? 'CARD ' : 'QUESTION ') + (state.itemIdx+1) + '/' + lv.items.length;
+    $('qmeta').textContent = lv.prompt ? lv.prompt.toUpperCase() : 'QUESTION ' + (state.itemIdx+1);
+    $('qtext').innerHTML = lv.mech === 'shooter' ? it.q : it.fact;
+    newTimer(itemBaseMs(lv, it, state.itemIdx));
+    eng().setup(lv, it);
+    state.phase = 'play';
+    $('qcard').scrollIntoView({behavior:'smooth', block:'start'});
+  }
+  function answerLabel(lv, it, key){
+    if(lv.mech === 'catcher'){ var b = lv.bins.filter(function(x){ return x.k===key; })[0]; return b ? b.label : ''; }
+    if(lv.mech === 'ladder'){ return (key+1) + '. ' + lv.rungs[key].label; }
+    return LETTERS[key] + '. ' + it.opts[key].t;
+  }
+  function resolve(choice, info){
+    if(state.phase !== 'play') return;
+    state.phase = 'feedback';
+    var lv = curLevel(), it = curItem(), st = state.stats[lv.id];
+    info = info || {};
+    st.answered++;
+    var ok = (choice === it.ans), v = $('fb-verdict'), body = '';
+    if(ok){
+      st.correct++; state.streak++; state.levelStreak++;
+      state.bestStreak = Math.max(state.bestStreak, state.streak);
+      var speed = Math.round(50 * Math.max(0, Math.min(1, info.speed || 0)));
+      var streakB = state.streak >= 3 ? 25 : 0, pts = 100 + speed + streakB;
+      addScore(pts); sfxCorrect(); flash('+' + pts, 'var(--green)');
+      v.className = 'verdict ok';
+      v.textContent = '✔ CORRECT. +' + pts + ' (100 base + ' + speed + ' speed' + (streakB ? ' + 25 streak' : '') + ')';
+      if(state.levelStreak === 5 && !state.streakLifeGiven){
+        state.streakLifeGiven = true;
+        body += '<p style="color:var(--magenta);">🔥 HOT STREAK: 5 in a row. ' + (gainLife() ? 'Extra life!' : 'Lives full, +150 points instead.') + '</p>';
+      }
+    } else {
+      state.streak = 0; state.levelStreak = 0; state.levelMistakes++;
+      loseLife(); sfxWrong(); flash(state.teacher ? 'MISS (NO LIFE LOST)' : '-1 LIFE', 'var(--red)');
+      v.className = 'verdict bad';
+      var why = info.between ? 'The card landed with the gavel between bins.' : (info.timeout ? 'Time ran out.' : 'You chose: ' + esc(answerLabel(lv, it, choice).replace(/<[^>]+>/g,'')) + '.');
+      v.textContent = '✘ NOT QUITE. ' + (choice === null ? (info.between ? 'MISSED THE BIN.' : 'OUT OF TIME.') : '');
+      body += '<p style="color:var(--red);">' + why + '</p>';
+    }
+    finishFeedback(lv, it, body, ok);
+  }
+  function skipItem(){
+    if(state.phase !== 'play' || !state.teacher) return;
+    state.phase = 'feedback';
+    var lv = curLevel(), it = curItem();
+    state.stats[lv.id].skipped++;
+    var v = $('fb-verdict'); v.className = 'verdict skip'; v.textContent = '⏭ SKIPPED (TEACHER MODE)';
+    finishFeedback(lv, it, '', null);
+  }
+  function finishFeedback(lv, it, body, ok){
+    body += '<p><b style="color:var(--green);">Answer: ' + answerLabel(lv, it, it.ans) + '</b></p>';
+    body += '<p>' + it.why + '</p>';
+    $('fb-body').innerHTML = body;
+    if(lv.mech === 'shooter'){
+      var lis = $('optlist').children;
+      for(var i=0;i<lis.length;i++){ if(i===it.ans) lis[i].classList.add('correct'); }
+    }
+    $('btn-next').textContent = state.lives <= 0 ? 'CONTINUE ▶' : (state.itemIdx+1 >= lv.items.length ? 'FINISH LEVEL ▶' : 'NEXT ▶');
+    $('feedback').style.display = 'block';
+    feedbackShownAt = performance.now();
+    setTimeout(function(){ $('feedback').scrollIntoView({behavior:'smooth', block:'nearest'}); }, 50);
+    updateHud();
+  }
+  var feedbackShownAt = 0;
+  function nextItem(){
+    if(state.phase !== 'feedback') return;
+    sfxClick();
+    if(state.lives <= 0){ triggerGameOver(); return; }
+    state.itemIdx++;
+    if(state.itemIdx >= curLevel().items.length){ finishLevel(); return; }
+    startItem();
+  }
+  function finishLevel(){
+    state.phase = 'done'; T = null;
+    var lv = curLevel(), st = state.stats[lv.id], bonus = '';
+    if(state.levelMistakes === 0 && st.skipped === 0){
+      addScore(250);
+      bonus = '★ FLAWLESS LEVEL: +250 points. ' + (gainLife() ? 'Extra life!' : 'Lives full, +150 points instead.');
+    }
+    playVictoryJingle();
+    $('done-title').textContent = 'LEVEL ' + (state.levelIdx+1) + ' CLEAR: ' + lv.name;
+    $('done-stats').innerHTML = '<p class="stat-line">' + lv.topic + ': ' + st.correct + '/' + st.total + ' correct' + (st.skipped ? ' (' + st.skipped + ' skipped)' : '') + '</p>' +
+      '<p class="stat-line">Score: ' + fmt(state.score) + ' · Lives: ' + state.lives + '</p>';
+    $('done-bonus').textContent = bonus;
+    $('btn-done-next').textContent = state.levelIdx+1 >= LEVELS.length ? 'SEE RESULTS ▶' : 'LEVEL ' + (state.levelIdx+2) + ' ▶';
+    showScreen('screen-done');
+  }
+  function afterDone(){
+    sfxClick();
+    if(state.levelIdx+1 >= LEVELS.length){ showEnd(); } else { startLevel(state.levelIdx+1); }
+  }
+  function triggerGameOver(){
+    state.phase = 'over'; T = null; state.outcome = 'over'; state.diedAt = state.levelIdx;
+    playGameOverJingle();
+    $('go-level').textContent = 'Level ' + (state.levelIdx+1) + ' (' + curLevel().name + ')';
+    $('go-score').textContent = fmt(state.score);
+    $('go-correct').textContent = totals().correct + '/' + totals().answered;
+    $('go-status').textContent = '';
+    showScreen('screen-gameover');
+  }
+  function totals(){
+    var c=0,a=0,s=0,t=0; LEVELS.forEach(function(l){ var st=state.stats[l.id]; c+=st.correct; a+=st.answered; s+=st.skipped; t+=st.total; });
+    return {correct:c, answered:a, skipped:s, total:t};
+  }
+
+  // ---------- ranks ----------
+  var RANKS = [
+    {min:0, max:3499, name:'MERE PREPARATION', meaning:'You bought the map. You have not left the house.'},
+    {min:3500, max:5999, name:'SUBSTANTIAL STEP', meaning:'Your conduct strongly corroborates a purpose to learn this material.'},
+    {min:6000, max:7999, name:'DANGEROUSLY CLOSE', meaning:'Even a common-law court would agree you nearly had it.'},
+    {min:8000, max:null, name:'COMPLETED OFFENSE', meaning:'Your attempt has merged into mastery.'}
+  ];
+  function rankFor(score){ var r = RANKS[0]; RANKS.forEach(function(x){ if(score >= x.min) r = x; }); return r; }
+  function rangeText(r){ return r.max === null ? fmt(r.min) + '+ pts' : fmt(r.min) + '-' + fmt(r.max) + ' pts'; }
+  function showEnd(){
+    state.outcome = 'complete'; state.phase = 'end';
+    var r = rankFor(state.score), tt = totals();
+    $('end-score').textContent = fmt(state.score);
+    $('end-correct').textContent = tt.correct + '/' + tt.total;
+    $('end-streak').textContent = state.bestStreak;
+    $('end-ranks').innerHTML = RANKS.map(function(x){
+      var a = x === r;
+      return '<div class="rank-row' + (a ? ' achieved' : '') + '"><span class="rn">' + (a ? '▶ YOUR RANK: ' : '') + x.name + '</span><span>' + rangeText(x) + '</span><span>' + x.meaning + '</span></div>';
+    }).join('');
+    $('end-recap').innerHTML = LEVELS.map(function(l){
+      return '<p><b style="color:var(--cyan);">Level ' + l.id + ', ' + l.name + ' (' + l.topic + ').</b> ' + l.recap + '</p>';
+    }).join('');
+    $('end-status').textContent = '';
+    playVictoryJingle();
+    showScreen('screen-end');
+  }
+
+  // ---------- completion report ----------
+  var GAME_TITLE = 'Inchoate Invaders';
+  function reportData(name){
+    var tt = totals(), r = rankFor(state.score);
+    var status = state.outcome === 'complete' ? 'Completed all levels' :
+      'Game over during Level ' + (state.diedAt+1) + ' (' + LEVELS[state.diedAt].name + ')';
+    return {
+      title: GAME_TITLE + ' - Report - ' + name, name:name,
+      date: new Date().toLocaleDateString('en-US', {year:'numeric', month:'long', day:'numeric'}),
+      status: status, correct: tt.correct, answeredTotal: state.outcome==='complete' ? tt.total : tt.answered + tt.skipped, total: tt.total,
+      score: state.score, rank: r, bestStreak: state.bestStreak, teacherUsed: state.teacherUsed,
+      levels: LEVELS.map(function(l){ var st = state.stats[l.id]; return {l:l, st:st, reached: state.outcome==='complete' || l.id-1 <= state.diedAt}; })
+    };
+  }
+  var SCORE_NOTE = 'Each correct answer earns 100 points plus a speed bonus of up to 50, with 25 more per answer during a streak of three or more. A flawless level adds 250. Wrong answers and timeouts cost a life but no points.';
+  function buildReportHtml(d){
+    var rows = RANKS.map(function(x){ var a = x === d.rank; return '<tr' + (a ? ' class="ach"' : '') + '><td>' + (a ? '&#9654; ' : '') + x.name + '</td><td>' + rangeText(x) + '</td><td>' + esc(x.meaning) + '</td></tr>'; }).join('');
+    var lv = d.levels.map(function(o){
+      var res = o.reached ? (o.st.correct + '/' + o.st.total + ' correct' + (o.st.skipped ? ' (' + o.st.skipped + ' skipped)' : '')) : 'Not reached';
+      return '<div class="qa-row"><h3>Level ' + o.l.id + ': ' + o.l.name + ' (' + o.l.topic + '): ' + res + '</h3><p>' + esc(o.l.recap) + '</p><p><b>Key terms to review:</b> ' + o.l.terms.map(esc).join('; ') + '</p></div>';
+    }).join('');
+    return '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>' + esc(d.title) + '</title><style>' +
+      '@page{margin:0.7in;} body{font-family:Georgia,"Times New Roman",serif; color:#000; background:#fff; max-width:760px; margin:24px auto; padding:0 18px; line-height:1.45;}' +
+      'h1{font-size:22px; margin:0 0 6px;} h2{font-size:17px; margin:22px 0 8px; border-bottom:1px solid #999;} h3{font-size:15px; margin:12px 0 4px;}' +
+      'table{border-collapse:collapse; width:100%; font-size:14px;} td,th{border:1px solid #999; padding:5px 8px; text-align:left;} tr.ach td{font-weight:bold; background:#eee;}' +
+      '.print-bar{background:#fff7d6; border:1px solid #c8971a; padding:10px 12px; margin-bottom:18px; font-family:Arial,sans-serif; font-size:14px;} .print-bar button{margin-left:10px; padding:6px 12px; font-size:14px;}' +
+      '@media print{ .print-bar{display:none;} .qa-row, tr{break-inside:avoid;} }</style></head><body>' +
+      '<div class="print-bar">To submit this report, save it as a PDF: choose "Save as PDF" (or "Microsoft Print to PDF") as the printer. <button onclick="window.print()">Print / Save as PDF</button></div>' +
+      '<h1>' + GAME_TITLE + ': Completion Report</h1>' +
+      '<p><b>Student:</b> ' + esc(d.name) + '<br><b>Date:</b> ' + d.date + '<br><b>Status:</b> ' + esc(d.status) + '</p>' +
+      '<p><b>Correct answers:</b> ' + d.correct + '/' + d.total + '<br><b>Final score:</b> ' + fmt(d.score) + ' pts<br><b>Rank achieved:</b> ' + d.rank.name + '<br><b>Best streak:</b> ' + d.bestStreak + '</p>' +
+      (d.teacherUsed ? '<p><b>Note:</b> Teacher mode was used during this run.</p>' : '') +
+      '<p><i>' + SCORE_NOTE + '</i></p>' +
+      '<h2>Rank table</h2><table><tr><th>Rank</th><th>Threshold</th><th>Meaning</th></tr>' + rows + '</table>' +
+      '<h2>Concept summary by level</h2><p><i>A study recap of the concepts each level covered. This is not a question-by-question answer key.</i></p>' + lv +
+      '<p style="font-size:12px; margin-top:20px;">Source: Themis Criminal Law outline, Section IV (Inchoate Crimes), pp. 38-44.</p></body></html>';
+  }
+  function asc(s){
+    return String(s).replace(/[‘’]/g,"'").replace(/[“”]/g,'"').replace(/[–—]/g,'-')
+      .replace(/§/g,'§').replace(/[→▶]/g,'>').replace(/…/g,'...').replace(/[^\x00-\xFF]/g,'');
+  }
+  function buildPdf(d){
+    var doc = new window.jspdf.jsPDF({unit:'pt', format:'letter'});
+    doc.setProperties({title: asc(d.title), author: asc(d.name), subject: GAME_TITLE + ' completion report'});
+    var M = 54, PW = 612, PH = 792, CW = PW - 2*M, y = M;
+    function ensure(h){ if(y + h > PH - M){ doc.addPage(); y = M; } }
+    function measure(str, size, style){ doc.setFont('times', style||'normal'); doc.setFontSize(size); return doc.splitTextToSize(asc(str), CW); }
+    function write(str, size, style, after){
+      var lines = measure(str, size, style), h = lines.length * size * 1.25;
+      ensure(h); doc.setFont('times', style||'normal'); doc.setFontSize(size);
+      doc.text(lines, M, y + size); y += h + (after === undefined ? 4 : after);
+    }
+    function rule(){ doc.setDrawColor(150); doc.line(M, y, PW-M, y); y += 8; }
+    write(GAME_TITLE + ': Completion Report', 20, 'bold', 8);
+    write('Student: ' + d.name, 12); write('Date: ' + d.date, 12); write('Status: ' + d.status, 12, 'normal', 10);
+    write('Correct answers: ' + d.correct + '/' + d.total, 12); write('Final score: ' + fmt(d.score) + ' pts', 12);
+    write('Rank achieved: ' + d.rank.name, 12); write('Best streak: ' + d.bestStreak, 12, 'normal', 10);
+    if(d.teacherUsed) write('Note: Teacher mode was used during this run.', 12, 'bold', 10);
+    write(SCORE_NOTE, 11, 'italic', 12);
+    write('Rank table', 15, 'bold', 2); rule();
+    RANKS.forEach(function(x){
+      var mark = x === d.rank ? '>> ' : '', txt = mark + x.name + '  (' + rangeText(x) + '): ' + x.meaning;
+      write(txt, 12, x === d.rank ? 'bold' : 'normal', 3);
+    });
+    y += 10;
+    write('Concept summary by level', 15, 'bold', 2); rule();
+    write('A study recap of the concepts each level covered. This is not a question-by-question answer key.', 11, 'italic', 8);
+    d.levels.forEach(function(o){
+      var res = o.reached ? (o.st.correct + '/' + o.st.total + ' correct' + (o.st.skipped ? ' (' + o.st.skipped + ' skipped)' : '')) : 'Not reached';
+      var head = 'Level ' + o.l.id + ': ' + o.l.name + ' (' + o.l.topic + ') - ' + res;
+      var terms = 'Key terms to review: ' + o.l.terms.join('; ');
+      var h = measure(head,13,'bold').length*13*1.25 + measure(o.l.recap,12).length*12*1.25 + measure(terms,12).length*12*1.25 + 24;
+      ensure(h);
+      write(head, 13, 'bold', 2); write(o.l.recap, 12, 'normal', 2); write(terms, 12, 'normal', 12);
+    });
+    write('Source: Themis Criminal Law outline, Section IV (Inchoate Crimes), pp. 38-44.', 10, 'italic', 0);
+    return doc.output('blob');
+  }
+  var downloadsNs = null;
+  try{ if(window.claude && typeof window.claude.use === 'function'){ window.claude.use('downloads').then(function(ns){ downloadsNs = ns; }, function(){}); } }catch(e){}
+  function deliver(blob, filename, statusEl, okMsg){
+    if(downloadsNs){
+      return downloadsNs.save({filename:filename, data:blob}).then(function(){ statusEl.textContent = okMsg; }, function(err){
+        var c = err && err.code;
+        statusEl.textContent = c === 'declined' ? 'Save cancelled. Click the button again whenever you are ready.' :
+          (c === 'rate_limited' ? 'A save prompt is already open. Finish that one first.' : 'Saving is unavailable here. Try opening the game in a regular browser tab.');
+      });
+    }
+    try{
+      var url = URL.createObjectURL(blob), a = document.createElement('a');
+      a.href = url; a.download = filename; document.body.appendChild(a); a.click();
+      setTimeout(function(){ URL.revokeObjectURL(url); a.remove(); }, 4000);
+      statusEl.textContent = okMsg;
+    }catch(e){ statusEl.textContent = 'Your browser blocked the download.'; }
+  }
+  function openPdfReport(html){
+    var w = null;
+    try{ w = window.open('', '_blank'); }catch(e){ w = null; }
+    if(w && w.document){
+      w.document.open(); w.document.write(html); w.document.close();
+      var fire = function(){ try{ w.focus(); w.print(); }catch(e){} };
+      if(w.document.readyState === 'complete'){ setTimeout(fire, 300); } else { w.addEventListener('load', function(){ setTimeout(fire, 300); }); }
+    } else {
+      var fr = document.createElement('iframe');
+      fr.style.cssText = 'position:fixed; right:0; bottom:0; width:0; height:0; border:0;';
+      document.body.appendChild(fr);
+      fr.onload = function(){ setTimeout(function(){ try{ fr.contentWindow.focus(); fr.contentWindow.print(); }catch(e){} setTimeout(function(){ fr.remove(); }, 60000); }, 300); };
+      fr.srcdoc = html;
+    }
+  }
+  function safeFile(s){ return s.replace(/[\\\/:*?"<>|]/g,'').replace(/\s+/g,' ').trim(); }
+  function getName(inputId, statusEl){
+    var n = $(inputId).value.trim();
+    if(!n){ statusEl.textContent = 'Please enter your name first.'; sfxWrong(); $(inputId).focus(); return null; }
+    return n;
+  }
+  function doPdf(inputId, statusId){
+    var st = $(statusId), name = getName(inputId, st); if(!name) return;
+    sfxClick(); var d = reportData(name), fname = safeFile(d.title) + '.pdf';
+    if(window.jspdf && window.jspdf.jsPDF){
+      st.textContent = 'Building your PDF...';
+      try{ deliver(buildPdf(d), fname, st, 'PDF ready: "' + fname + '". Submit that file.'); }
+      catch(e){ st.textContent = 'Could not build the PDF here. Use the HTML download, then its Print / Save as PDF button.'; }
+    } else {
+      openPdfReport(buildReportHtml(d));
+      st.textContent = 'In the print dialog, choose "Save as PDF" (or "Microsoft Print to PDF") as the printer, then Save.';
+    }
+  }
+  function doHtml(inputId, statusId){
+    var st = $(statusId), name = getName(inputId, st); if(!name) return;
+    sfxClick(); var d = reportData(name), fname = safeFile(d.title) + '.html';
+    deliver(new Blob([buildReportHtml(d)], {type:'text/html'}), fname, st, 'Downloaded "' + fname + '". Open it and use its Print / Save as PDF button.');
+  }
+
+  // ---------- dialogs ----------
+  function openOverlay(id){ $(id).classList.add('show'); state.paused = true; }
+  function closeOverlay(id){
+    $(id).classList.remove('show');
+    state.paused = $('pace-overlay').classList.contains('show') || $('teacher-overlay').classList.contains('show');
+  }
+  $('hud-pace').addEventListener('click', function(){ sfxClick(); openOverlay('pace-overlay'); });
+  $('pace-done').addEventListener('click', function(){ sfxClick(); closeOverlay('pace-overlay'); });
+
+  function renderTeacher(){
+    $('teacher-locked').style.display = state.teacher ? 'none' : 'block';
+    $('teacher-unlocked').style.display = state.teacher ? 'block' : 'none';
+    $('hud-teacher').classList.toggle('on', state.teacher);
+    $('hud-teacher').textContent = state.teacher ? '🔑 TEACHER: ON' : '🔑 TEACHER';
+    document.body.classList.toggle('teacher-on', state.teacher);
+    var g = $('teacher-levels'); g.innerHTML = '';
+    LEVELS.forEach(function(l,i){
+      var b = document.createElement('button'); b.type = 'button'; b.className = 'arcade-btn cyan';
+      b.style.fontSize = '10px'; b.textContent = 'L' + (i+1) + ': ' + l.name;
+      b.addEventListener('click', function(){ closeOverlay('teacher-overlay'); jumpTo(i); });
+      g.appendChild(b);
+    });
+    updateHud();
+  }
+  function openTeacher(){ sfxClick(); $('teacher-err').textContent = ''; $('teacher-pw').value = ''; renderTeacher(); openOverlay('teacher-overlay'); if(!state.teacher) setTimeout(function(){ $('teacher-pw').focus(); }, 30); }
+  $('hud-teacher').addEventListener('click', openTeacher);
+  $('btn-teacher-title').addEventListener('click', openTeacher);
+  $('teacher-close').addEventListener('click', function(){ sfxClick(); closeOverlay('teacher-overlay'); });
+  $('teacher-form').addEventListener('submit', function(e){
+    e.preventDefault();
+    if($('teacher-pw').value === TEACHER_PASSWORD){ state.teacher = true; state.teacherUsed = true; sfxCorrect(); renderTeacher(); }
+    else { $('teacher-err').textContent = 'Incorrect password.'; sfxWrong(); $('teacher-pw').select(); }
+  });
+  $('teacher-off').addEventListener('click', function(){ state.teacher = false; sfxClick(); renderTeacher(); });
+  function jumpTo(i){ state.paused = false; if(state.lives <= 0){ state.lives = START_LIVES; } state.outcome = null; state.diedAt = null; startLevel(i); }
+
+  // ---------- input ----------
+  function typing(e){ var t = e.target; return t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA'); }
+  document.addEventListener('keydown', function(e){
+    if(typing(e)) return;
+    if($('pace-overlay').classList.contains('show') || $('teacher-overlay').classList.contains('show')){
+      if(e.key === 'Escape'){ closeOverlay('pace-overlay'); closeOverlay('teacher-overlay'); }
+      return;
+    }
+    if(state.phase === 'play' && !state.paused){
+      if(eng().key(e.key, true)) e.preventDefault();
+    } else if(state.phase === 'feedback' && e.key === 'Enter' && performance.now() - feedbackShownAt > 800){
+      e.preventDefault(); nextItem();
+    } else if(state.phase === 'feedback' && (e.key === ' ' || e.key.indexOf('Arrow') === 0) && document.activeElement === document.body){
+      e.preventDefault();
+    }
+  });
+  document.addEventListener('keyup', function(e){
+    if(typing(e)) return;
+    if(state.phase === 'play' && curLevel() && curLevel().mech === 'shooter') Shooter.key(e.key, false);
+  });
+  cv.addEventListener('click', function(e){ if(state.phase === 'play' && !state.paused) eng().click(canvasPoint(e)); });
+
+  $('btn-start').addEventListener('click', function(){ sfxClick(); playStartJingle(); showScreen('screen-briefing'); });
+  $('btn-brief-go').addEventListener('click', function(){ startLevel(0); });
+  $('btn-begin').addEventListener('click', beginLevel);
+  $('btn-next').addEventListener('click', nextItem);
+  $('btn-skip').addEventListener('click', skipItem);
+  $('btn-done-next').addEventListener('click', afterDone);
+  $('end-pdf').addEventListener('click', function(){ doPdf('end-name','end-status'); });
+  $('end-html').addEventListener('click', function(){ doHtml('end-name','end-status'); });
+  $('go-pdf').addEventListener('click', function(){ doPdf('go-name','go-status'); });
+  $('go-html').addEventListener('click', function(){ doHtml('go-name','go-status'); });
+  function again(){ var t = state.teacher, tu = state.teacherUsed && t; state = freshState(); state.teacher = t; state.teacherUsed = tu; renderTeacher(); updateHud(); sfxClick(); showScreen('screen-briefing'); }
+  $('end-again').addEventListener('click', again);
+  $('go-again').addEventListener('click', again);
+
+  renderPaceChips(); updateHud();
+  // Test hook (read-only view for automated playtesting).
+  window.__inchoate = { levels: LEVELS, get state(){ return state; }, curItem: function(){ return state.levelIdx>=0 ? curItem() : null; }, frac: frac, timer: function(){ return T; }, shooter: Shooter, catcher: Catcher };
+})();
+</script>
+</body>
+</html>
